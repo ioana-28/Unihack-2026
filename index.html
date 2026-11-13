@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080706" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23080706'/%3E%3Crect x='6' y='7' width='20' height='18' fill='none' stroke='%23e0a044' stroke-width='2'/%3E%3C/svg%3E"
+    />
+    <meta
+      name="description"
+      content="Apartamentul — o experiență VR despre Timișoara, 15–22 decembrie 1989."
+    />
+    <title>Apartamentul · Timișoara, decembrie 1989</title>
+  </head>
+  <body data-mode="lobby">
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+
+    <main class="lobby" id="lobby">
+      <div class="lobby__inner">
+        <header class="head">
+          <h1 class="title">Apartamentul</h1>
+          <p class="lede">O cameră, o fereastră, o revoluție privită de aproape.</p>
+          <p class="dateline">Timișoara, 15 decembrie 1989. Opt zile.</p>
+          <p class="lede lede--en" lang="en">
+            One room, one window, a revolution seen from close by.
+          </p>
+        </header>
+
+        <div class="actions">
+          <button
+            id="enter"
+            class="btn btn--primary"
+            type="button"
+            aria-labelledby="enter-label"
+            aria-describedby="enter-hint"
+          >
+            <span class="btn__label" id="enter-label">Deschide apartamentul</span>
+            <span class="btn__hint" id="enter-hint">Se verifică…</span>
+          </button>
+          <div class="actions__row">
+            <button
+              id="howto-toggle"
+              class="btn btn--ghost"
+              type="button"
+              aria-expanded="false"
+              aria-controls="howto"
+            >
+              Cum se joacă
+            </button>
+            <button id="desktop" class="btn btn--ghost" type="button" hidden>
+              Deschide pe desktop
+            </button>
+          </div>
+        </div>
+
+        <section id="howto" class="howto" hidden>
+          <p class="howto__note">
+            Pentru VR ai nevoie de Chrome pe Android și de căști. Mișcarea este pe loc.
+          </p>
+          <ol class="howto__list">
+            <li>
+              <span class="howto__num">01</span>
+              <div>
+                <h2>Așezat</h2>
+                <p>Stai jos, cu telefonul în cască. Experiența e gândită pentru stat pe loc.</p>
+              </div>
+            </li>
+            <li>
+              <span class="howto__num">02</span>
+              <div>
+                <h2>Privește</h2>
+                <p>Întoarce capul ca să explorezi camera. Nu există mers liber.</p>
+              </div>
+            </li>
+            <li>
+              <span class="howto__num">03</span>
+              <div>
+                <h2>Fixează</h2>
+                <p>Ține privirea pe un obiect circa 1,5 secunde ca să interacționezi.</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <footer class="foot">
+          <p class="status" id="status" role="status">
+            <span class="status__dot" id="status-dot" data-kind="off" aria-hidden="true"></span>
+            <span id="status-text">Se verifică…</span>
+          </p>
+          <p class="credits">Prototip <span aria-hidden="true">·</span> Unihack 2026</p>
+        </footer>
+      </div>
+    </main>
+
+    <button id="exit" class="exit" type="button" hidden>
+      Ieși <span class="exit__key" aria-hidden="true">Esc</span>
+    </button>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+      <p class="toast__message" id="toast-message"></p>
+      <button class="toast__action" id="toast-action" type="button" hidden></button>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

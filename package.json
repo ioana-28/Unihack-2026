@@ -1,0 +1,22 @@
+{
+  "name": "apartamentul-1989",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "smoke": "node scripts/smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "@types/webxr": "^0.5.24",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.8"
+  }
+}
