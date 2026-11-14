@@ -4,7 +4,7 @@ import type { StateId } from './states'
 import type { Reticle } from './reticle'
 
 const DWELL_SECONDS = 1.5
-const NAV_GAZE_ANGLE = THREE.MathUtils.degToRad(22)
+const NAV_GAZE_ANGLE = THREE.MathUtils.degToRad(20)
 const NAV_MIN_DISTANCE = 0.6
 const CLICK_RADIUS = 0.18
 const CLICK_SLOP = 5
