@@ -144,6 +144,27 @@ function parseModel(loader: GLTFLoader, buffer: ArrayBuffer): Promise<THREE.Grou
   })
 }
 
+function warmUpModel(scene: THREE.Object3D, renderer: THREE.WebGLRenderer): void {
+  const textures = new Set<THREE.Texture>()
+
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return
+    const materials = Array.isArray(object.material) ? object.material : [object.material]
+    for (const material of materials) {
+      const physical = material as THREE.MeshPhysicalMaterial
+      if (physical.transmission > 0) {
+        physical.transmission = 0
+        physical.needsUpdate = true
+      }
+      for (const value of Object.values(material)) {
+        if (value instanceof THREE.Texture) textures.add(value)
+      }
+    }
+  })
+
+  for (const texture of textures) renderer.initTexture(texture)
+}
+
 export function createRoom(renderer: THREE.WebGLRenderer): Room {
   const root = new THREE.Group()
   root.name = 'apartment'
@@ -200,6 +221,7 @@ export function createRoom(renderer: THREE.WebGLRenderer): Room {
           placeholder = null
         }
         root.add(model)
+        warmUpModel(model, renderer)
         progress = { loaded: progress.total, total: progress.total }
         ready = true
         void requestPersistentStorage()

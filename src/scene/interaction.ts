@@ -8,7 +8,7 @@ const MARKER_Y = 0.03
 const MARKER_OPACITY = 0.55
 const HIT_RADIUS = 0.2
 const CLICK_SLOP = 5
-const RAYCAST_INTERVAL = 0.1
+const RAYCAST_INTERVAL = 0.15
 const FLASH_MS = 800
 const ORIGIN = new THREE.Vector2(0, 0)
 
@@ -238,24 +238,56 @@ export function createInteractionController(
     return null
   }
 
+  const resolveInteractableRoot = (object: THREE.Object3D): THREE.Object3D | null => {
+    let currentObject: THREE.Object3D | null = object
+    while (currentObject && currentObject !== room) {
+      if (rootForKey.has(currentObject)) return currentObject
+      currentObject = currentObject.parent
+    }
+    return null
+  }
+
+  const contains = (rootObject: THREE.Object3D, object: THREE.Object3D): boolean => {
+    let currentObject: THREE.Object3D | null = object
+    while (currentObject) {
+      if (currentObject === rootObject) return true
+      currentObject = currentObject.parent
+    }
+    return false
+  }
+
+  const isOccluded = (hit: THREE.Intersection, rootObject: THREE.Object3D | null): boolean => {
+    const occluders = raycaster.intersectObject(room, true)
+    for (const occluder of occluders) {
+      if (!isVisible(occluder.object)) continue
+      if (occluder.distance >= hit.distance - 0.01) return false
+      if (rootObject && contains(rootObject, occluder.object)) return false
+      return true
+    }
+    return false
+  }
+
   const acquire = (): GazeTarget | null => {
     camera.updateMatrixWorld()
-    world.updateMatrixWorld(true)
     raycaster.setFromCamera(ORIGIN, camera)
 
     const candidates: THREE.Object3D[] = hitTargets.slice()
-    if (interactableRoots.length > 0) candidates.push(room)
-    const hits = raycaster.intersectObjects(candidates, true)
+    for (const interactableRoot of interactableRoots) candidates.push(interactableRoot)
+    if (candidates.length === 0) return null
 
+    const hits = raycaster.intersectObjects(candidates, true)
     for (const hit of hits) {
       if (!isVisible(hit.object)) continue
       const stateId = stateForHit.get(hit.object)
-      if (stateId) return { kind: 'state', id: stateId }
+      if (stateId) {
+        if (isOccluded(hit, null)) return null
+        return { kind: 'state', id: stateId }
+      }
       const interactable = resolveObject(hit.object)
       if (interactable) {
+        if (isOccluded(hit, resolveInteractableRoot(hit.object))) return null
         return { kind: 'object', key: interactable.key, prompt: interactable.prompt }
       }
-      return null
     }
     return null
   }

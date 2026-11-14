@@ -58,6 +58,8 @@ export class App {
   private entering = false
   private hintUntil = 0
   private mono = true
+  private compiled = false
+  private xrCompiled = false
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
@@ -73,6 +75,7 @@ export class App {
     this.renderer.xr.enabled = true
     this.renderer.xr.setReferenceSpaceType('local')
     this.renderer.xr.setFramebufferScaleFactor(0.75)
+    this.renderer.xr.setFoveation(0.5)
     this.installMonoXR()
 
     this.scene.background = new THREE.Color(0x07080a)
@@ -232,6 +235,13 @@ export class App {
       this.interaction.setEnabled(false)
       this.prologue.start()
       this.setMode('vr')
+
+      if (!this.xrCompiled) {
+        this.xrCompiled = true
+        void this.renderer.compileAsync(this.scene, this.camera).catch((error: unknown) => {
+          console.warn('Could not precompile XR shaders', error)
+        })
+      }
 
       session.addEventListener('end', this.handleSessionEnd, { once: true })
     } finally {
@@ -458,6 +468,13 @@ export class App {
       } else {
         this.hint.material.opacity = Math.min(0.95, remaining / HINT_FADE)
       }
+    }
+
+    if (!this.compiled && this.room.isReady()) {
+      this.compiled = true
+      void this.renderer.compileAsync(this.scene, this.camera).catch((error: unknown) => {
+        console.warn('Could not precompile room shaders', error)
+      })
     }
 
     if (this.debug.isActive()) {
