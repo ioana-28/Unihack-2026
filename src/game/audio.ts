@@ -27,15 +27,30 @@ export class GameAudio {
 
   constructor(camera: THREE.Camera) {
     camera.add(this.listener)
+    // Phones and headsets suspend the context when the immersive session starts
+    // (and sometimes swap the audio route). The gesture that opened VR is gone
+    // by then, so wake it back up whenever it drops out of "running".
+    this.context.addEventListener('statechange', this.handleStateChange)
   }
 
   get context(): AudioContext {
     return this.listener.context
   }
 
-  /** Call from a user gesture (tap/click) so phones allow sound. */
+  private readonly handleStateChange = (): void => {
+    console.info('[audio] Context state:', this.context.state)
+    this.resume()
+  }
+
+  /** Call from a user gesture (tap/click) so phones allow sound. Safe to repeat. */
   resume(): void {
-    if (this.context.state !== 'running') void this.context.resume().catch(() => undefined)
+    if (this.context.state === 'running') return
+    void this.context.resume().catch(() => undefined)
+  }
+
+  dispose(): void {
+    this.context.removeEventListener('statechange', this.handleStateChange)
+    this.stopAll()
   }
 
   load(src: string): Promise<AudioBuffer | null> {
@@ -137,6 +152,7 @@ export class GameAudio {
       sound.setVolume(options.volume ?? 1)
       const filters = this.filters(options.filter)
       if (filters.length > 0) sound.setFilters(filters)
+      this.resume()
       sound.play()
       // Natural end (stop() also cleans up itself).
       sound.source?.addEventListener('ended', cleanup)

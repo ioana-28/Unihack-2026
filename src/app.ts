@@ -261,6 +261,15 @@ export class App {
     try {
       const session = await enterVRSession(this.renderer)
 
+      // Some phone browsers suspend (or re-route) the audio context as the
+      // immersive session takes over. Resume it once the session is live and
+      // again on every interaction the headset reports.
+      this.audio.resume()
+      session.addEventListener('select', () => this.audio.resume())
+      session.addEventListener('visibilitychange', () => {
+        if (session.visibilityState === 'visible') this.audio.resume()
+      })
+
       const spawnOffset = EYE_START.clone().applyAxisAngle(UP, -LOBBY_YAW)
       this.world.position.set(-spawnOffset.x, -EYE_START.y, -spawnOffset.z)
       this.world.rotation.y = -LOBBY_YAW
@@ -293,6 +302,7 @@ export class App {
   async enterCardboard(): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
+    this.audio.resume()
     this.controls.setEnabled(false)
     this.rig.rotation.set(0, 0, 0)
     this.rig.position.set(0, 0, 0)
@@ -372,6 +382,7 @@ export class App {
     this.debug.dispose()
     this.runner.stop()
     this.overlay.dispose()
+    this.audio.dispose()
     this.interaction.dispose()
     this.reticle.dispose()
     this.room.dispose()
@@ -408,6 +419,7 @@ export class App {
 
   private readonly handlePrologueEnd = (): void => {
     if (this.mode !== 'vr' && this.mode !== 'cardboard') return
+    this.audio.resume()
     this.camera.focus = CARDBOARD_HUD_DISTANCE
     this.reticle.group.visible = true
     this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')

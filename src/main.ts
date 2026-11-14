@@ -13,6 +13,7 @@ let lobby: Lobby | null = null
 const app = new App(canvas, (mode) => {
   lobby?.setMode(mode)
 })
+;(window as unknown as { __app: App }).__app = app
 
 const secureContext = window.isSecureContext
 const xrPresent = hasXR()

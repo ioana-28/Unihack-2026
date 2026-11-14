@@ -159,6 +159,9 @@ export function createPrologueScreen(
   }
 
   const handleEnded = (): void => {
+    // Release the media element so the game's Web Audio keeps audio focus.
+    video.pause()
+    video.muted = true
     if (state === 'playing') state = 'fading'
   }
 
@@ -188,6 +191,7 @@ export function createPrologueScreen(
     object.visible = true
     camera.focus = SCREEN_DISTANCE
     video.loop = false
+    video.muted = false
     if (video.readyState >= 1) video.currentTime = 0
     video.addEventListener('ended', handleEnded, { once: true })
     play()
