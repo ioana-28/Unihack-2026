@@ -54,10 +54,10 @@ export function createHintPanel(): HintPanel {
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
+    fog: false,
   })
 
   const object = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.245), material)
-  object.position.set(0, -0.3, -1.2)
   object.renderOrder = 20
   object.visible = false
 

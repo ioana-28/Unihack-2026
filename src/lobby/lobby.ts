@@ -8,6 +8,7 @@ export type EntryState = {
   label: string
   hint: string
   showDesktop: boolean
+  disabled?: boolean
 }
 
 export type ToastAction = {
@@ -51,6 +52,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
 
   let enterTarget: EnterTarget = 'desktop'
   let currentHint = ''
+  let entryDisabled = false
   let toastTimer = 0
   let toastRun: (() => void) | null = null
 
@@ -93,12 +95,14 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
     setEntry(state) {
       enterTarget = state.target
       currentHint = state.hint
+      entryDisabled = state.disabled ?? false
       enterLabel.textContent = state.label
       enterHint.textContent = state.hint
+      enter.disabled = entryDisabled
       desktop.hidden = !state.showDesktop
     },
     setBusy(busy) {
-      enter.disabled = busy
+      enter.disabled = busy || entryDisabled
       desktop.disabled = busy
       if (busy) {
         enter.setAttribute('aria-busy', 'true')

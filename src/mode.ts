@@ -1,1 +1,1 @@
-export type Mode = 'lobby' | 'desktop' | 'vr'
+export type Mode = 'lobby' | 'desktop' | 'cardboard' | 'vr'

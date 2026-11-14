@@ -190,6 +190,17 @@ async function main() {
         "(() => { const canvas = document.querySelector('#stage'); return canvas.width > 0 && canvas.height > 0 })()",
       ),
     )
+    check(
+      'canvas has no inline size',
+      await evaluate(cdp, "document.querySelector('#stage').getAttribute('style') === null"),
+    )
+    check(
+      'canvas fills the viewport',
+      await evaluate(
+        cdp,
+        "(() => { const rect = document.querySelector('#stage').getBoundingClientRect(); return Math.abs(rect.width - window.innerWidth) < 1 && Math.abs(rect.height - window.innerHeight) < 1 })()",
+      ),
+    )
 
     check(
       'howto starts collapsed',
@@ -228,14 +239,17 @@ async function main() {
       windowsVirtualKeyCode: 9,
     })
     check(
-      'keyboard reaches the entry control',
-      await evaluate(cdp, "document.activeElement?.id === 'enter'"),
-    )
-    check(
-      'entry control shows a focus ring',
+      'keyboard reaches an action',
       await evaluate(
         cdp,
-        "(() => { const style = getComputedStyle(document.querySelector('#enter')); return style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 2 })()",
+        "['enter', 'howto-toggle', 'desktop'].includes(document.activeElement?.id)",
+      ),
+    )
+    check(
+      'focused action shows a focus ring',
+      await evaluate(
+        cdp,
+        "(() => { const style = getComputedStyle(document.activeElement); return style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 2 })()",
       ),
     )
 
@@ -244,17 +258,42 @@ async function main() {
     await writeFile(join(ARTIFACTS, 'lobby.png'), Buffer.from(lobbyShot.data, 'base64'))
 
     check(
-      'only one entry control is offered',
+      'VR entry is available and desktop stays reachable',
       await evaluate(
         cdp,
-        "(() => { const ghost = document.querySelector('#desktop'); return ghost.hidden === true && getComputedStyle(ghost).display === 'none' && document.querySelectorAll('.actions .btn:not([hidden])').length === 2 })()",
+        "(() => { const ghost = document.querySelector('#desktop'); return document.querySelector('#enter').disabled === false && ghost.hidden === false && getComputedStyle(ghost).display !== 'none' })()",
       ),
     )
+
+    check(
+      'cardboard mode starts from the primary action',
+      await evaluate(
+        cdp,
+        "(() => { document.querySelector('#enter').click(); return document.body.dataset.mode === 'cardboard' && getComputedStyle(document.querySelector('#lobby')).display === 'none' })()",
+      ),
+    )
+
+    await sleep(700)
+    const cardboardShot = await cdp.send('Page.captureScreenshot', { format: 'png' })
+    await writeFile(join(ARTIFACTS, 'cardboard.png'), Buffer.from(cardboardShot.data, 'base64'))
+
+    check(
+      'cardboard keeps the stereo frame',
+      await evaluate(cdp, "document.body.dataset.mode === 'cardboard'"),
+    )
+    check(
+      'escape leaves cardboard',
+      await evaluate(
+        cdp,
+        "(() => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true })); return document.body.dataset.mode === 'lobby' && document.querySelector('#exit').hidden === true })()",
+      ),
+    )
+
     check(
       'desktop mode hides the lobby and shows exit',
       await evaluate(
         cdp,
-        "(() => { const ghost = document.querySelector('#desktop'); const entry = ghost.hidden ? document.querySelector('#enter') : ghost; entry.click(); return document.body.dataset.mode === 'desktop' && document.querySelector('#exit').hidden === false && getComputedStyle(document.querySelector('#lobby')).display === 'none' })()",
+        "(() => { document.querySelector('#desktop').click(); return document.body.dataset.mode === 'desktop' && document.querySelector('#exit').hidden === false && getComputedStyle(document.querySelector('#lobby')).display === 'none' })()",
       ),
     )
 
