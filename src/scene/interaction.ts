@@ -4,9 +4,9 @@ import type { StateId } from './states'
 import type { Reticle } from './reticle'
 
 const DWELL_SECONDS = 1.5
-const NAV_GAZE_ANGLE = THREE.MathUtils.degToRad(12)
+const NAV_GAZE_ANGLE = THREE.MathUtils.degToRad(22)
 const NAV_MIN_DISTANCE = 0.6
-const CLICK_RADIUS = 0.12
+const CLICK_RADIUS = 0.18
 const CLICK_SLOP = 5
 const RAYCAST_INTERVAL = 0.15
 const FLASH_MS = 800
@@ -84,6 +84,11 @@ export function createInteractionController(
 
   const adjacentTo = (id: StateId): StateId[] => adjacency.get(id) ?? []
 
+  const navigationLabel = (id: StateId): string => {
+    const state = getState(id)
+    return state.tag ?? state.label
+  }
+
   const updateNavigationTargets = (): void => {
     navigationIds = adjacentTo(current)
     world.updateMatrixWorld(true)
@@ -123,16 +128,11 @@ export function createInteractionController(
       reticle.setPrompt('ok')
       return
     }
-    if (!target) {
+    if (target?.kind !== 'object') {
       reticle.setPrompt(null)
       return
     }
-    if (target.kind === 'object') {
-      reticle.setPrompt(armed ? target.prompt : null)
-      return
-    }
-    const state = getState(target.id)
-    reticle.setPrompt(state.tag ?? state.label)
+    reticle.setPrompt(armed ? target.prompt : null)
   }
 
   const clearGaze = (): void => {
@@ -142,6 +142,7 @@ export function createInteractionController(
     flashUntil = 0
     reticle.setProgress(0)
     reticle.setPrompt(null)
+    reticle.setNavigation(null, 0)
   }
 
   const refresh = (): void => {
@@ -290,6 +291,7 @@ export function createInteractionController(
         dwell = 0
         flashUntil = 0
         reticle.setProgress(0)
+        reticle.setNavigation(next?.kind === 'state' ? navigationLabel(next.id) : null, 0)
         if (next === null) armed = true
         updatePrompt()
       }
@@ -299,7 +301,7 @@ export function createInteractionController(
 
     if (target.kind === 'state') {
       dwell += delta
-      reticle.setProgress(Math.min(dwell / DWELL_SECONDS, 1))
+      reticle.setNavigation(navigationLabel(target.id), Math.min(dwell / DWELL_SECONDS, 1))
       if (dwell >= DWELL_SECONDS) teleportTo(target.id)
       return
     }
@@ -361,6 +363,7 @@ export function createInteractionController(
     flashUntil = 0
     reticle.setProgress(0)
     reticle.setPrompt(null)
+    reticle.setNavigation(null, 0)
   }
 
   const setMode = (next: InteractionMode): void => {
