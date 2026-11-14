@@ -8,7 +8,7 @@ export class DesktopControls {
 
   private readonly camera: THREE.PerspectiveCamera
   private readonly element: HTMLElement
-  private readonly eyeHeight: number
+  private eyeHeight: number
   private readonly onExit: () => void
   private readonly keys = new Set<string>()
   private enabled = false
@@ -34,6 +34,10 @@ export class DesktopControls {
     window.addEventListener('blur', this.handleBlur)
     window.addEventListener('keydown', this.handleKeyDown)
     window.addEventListener('keyup', this.handleKeyUp)
+  }
+
+  setEyeHeight(height: number): void {
+    this.eyeHeight = height
   }
 
   setEnabled(enabled: boolean): void {

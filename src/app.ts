@@ -9,6 +9,8 @@ import { createPrologueScreen } from './scene/prologue'
 import type { PrologueScreen } from './scene/prologue'
 import { createRoom } from './scene/room'
 import type { Room } from './scene/room'
+import { createTeleportController } from './scene/teleport'
+import type { TeleportController } from './scene/teleport'
 import { enterVRSession } from './xr/session'
 
 const EYE_START = new THREE.Vector3(8.074, 1.032, -6.752)
@@ -69,6 +71,7 @@ export class App {
   private readonly stereo: StereoEffect
   private readonly orientation: OrientationControls
   private readonly debug: DebugControls
+  private readonly teleport: TeleportController
   private readonly timer = new THREE.Timer()
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   private readonly onModeChange: (mode: Mode) => void
@@ -128,6 +131,13 @@ export class App {
       rig: this.rig,
       room: this.room.root,
     })
+    this.teleport = createTeleportController({
+      camera: this.camera,
+      rig: this.rig,
+      world: this.world,
+      canvas,
+      onDesktopArrive: (eyeHeight) => this.controls.setEyeHeight(eyeHeight),
+    })
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
 
     this.updateViewport()
@@ -146,12 +156,17 @@ export class App {
     void this.requestFullscreen()
     this.controls.yaw = this.camera.rotation.y
     this.controls.pitch = this.camera.rotation.x
+    this.controls.setEyeHeight(EYE_START.y)
     this.controls.setEnabled(true)
+    this.teleport.reset()
+    this.teleport.setMode('desktop')
+    this.teleport.setEnabled(true)
     this.setMode('desktop')
   }
 
   exitToLobby(): void {
     if (this.mode !== 'desktop') return
+    this.teleport.setEnabled(false)
     this.controls.setEnabled(false)
     this.exitFullscreen()
     this.setMode('lobby')
@@ -177,12 +192,14 @@ export class App {
         this.controls.yaw = pose.yaw
         this.controls.pitch = pose.pitch
         this.controls.setEnabled(true)
+        this.teleport.setEnabled(true)
       }
       this.updateViewport()
       return
     }
 
     if (this.mode === 'vr' || this.mode === 'cardboard') return
+    this.teleport.setEnabled(false)
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
     this.reticle.visible = false
@@ -208,6 +225,9 @@ export class App {
       this.setHudDistance(WEBXR_HUD_DISTANCE)
       this.reticle.visible = false
       this.hint.object.visible = false
+      this.teleport.reset()
+      this.teleport.setMode('vr')
+      this.teleport.setEnabled(false)
       this.prologue.start()
       this.setMode('vr')
 
@@ -254,6 +274,7 @@ export class App {
 
   exitCardboard(): void {
     if (this.mode !== 'cardboard') return
+    this.teleport.setEnabled(false)
     this.prologue.stop()
     this.orientation.setEnabled(false)
     this.reticle.visible = false
@@ -270,6 +291,8 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
+    this.teleport.setEnabled(false)
+    this.teleport.reset()
     this.prologue.stop()
     this.world.position.set(0, 0, 0)
     this.world.rotation.set(0, 0, 0)
@@ -293,6 +316,7 @@ export class App {
     this.orientation.dispose()
     this.controls.dispose()
     this.debug.dispose()
+    this.teleport.dispose()
     this.room.dispose()
     this.prologue.dispose()
     this.renderer.dispose()
@@ -329,6 +353,8 @@ export class App {
     if (this.mode !== 'vr' && this.mode !== 'cardboard') return
     this.camera.focus = CARDBOARD_HUD_DISTANCE
     this.reticle.visible = true
+    this.teleport.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
+    this.teleport.setEnabled(true)
     this.showHint()
   }
 
@@ -456,12 +482,14 @@ export class App {
 
     if (this.mode === 'desktop') {
       this.controls.update(delta)
+      this.teleport.update(delta)
       this.renderer.render(this.scene, this.camera)
       return
     }
 
     if (this.mode === 'vr') {
       this.prologue.update(delta)
+      this.teleport.update(delta)
       this.renderer.render(this.scene, this.camera)
       return
     }
