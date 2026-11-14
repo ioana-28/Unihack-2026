@@ -5,9 +5,9 @@
   "states": {
     "livingCouch": {
       "label": "Living room - couch facing the TV",
+      "tag": "Canapea",
       "position": { "x": 8.074, "y": 1.032, "z": -6.752 },
       "facing": "tv",
-      "markerY": 0.42,
       "interactables": {
         "newspaper": "Citește ziarul",
         "phone": "Răspunde la telefon",
@@ -16,6 +16,7 @@
     },
     "livingPhone": {
       "label": "Living room - standing by the phone",
+      "tag": "Telefon",
       "position": { "x": 7.035, "y": 1.192, "z": -5.025 },
       "facing": "phone",
       "interactables": {
@@ -25,8 +26,8 @@
     },
     "livingChair": {
       "label": "Living room - chair",
+      "tag": "Fotoliu",
       "position": { "x": 8.643, "y": 1.019, "z": -5.133 },
-      "markerY": 0.40,
       "facing": "radio",
       "interactables": {
         "radio": "Pornește radioul"
@@ -34,30 +35,35 @@
     },
     "hallByLiving": {
       "label": "Hallway - outside the living room",
+      "tag": "Hol",
       "position": { "x": 4.336, "y": 1.272, "z": -4.183 },
       "facing": "balconyRail",
       "interactables": null
     },
     "hallCenter": {
       "label": "Hallway - center, all rooms visible",
+      "tag": "Hol",
       "position": { "x": 4.577, "y": 1.272, "z": -2.895 },
       "facing": "sofa",
       "interactables": null
     },
     "hallEntry": {
       "label": "Hallway - front door",
+      "tag": "Intrare",
       "position": { "x": 6.317, "y": 1.272, "z": -1.458 },
       "facing": "entryDoor",
       "interactables": null
     },
     "kitchen": {
       "label": "Kitchen",
+      "tag": "Bucătărie",
       "position": { "x": 8.525, "y": 1.272, "z": -2.737 },
       "facing": "kitchenCounter",
       "interactables": null
     },
     "bathroom": {
       "label": "Bathroom",
+      "tag": "Baie",
       "position": { "x": 4.579, "y": 1.272, "z": -5.72 },
       "facing": "bathtub",
       "interactables": {
