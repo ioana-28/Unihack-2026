@@ -1,5 +1,6 @@
 import './lobby/lobby.css'
 import { App } from './app'
+import { gameState } from './game/state'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
@@ -13,6 +14,7 @@ let lobby: Lobby | null = null
 const app = new App(canvas, (mode) => {
   lobby?.setMode(mode)
 })
+Object.assign(window, { __app: app, __game: gameState })
 
 const secureContext = window.isSecureContext
 const xrPresent = hasXR()
@@ -42,6 +44,24 @@ lobby = mountLobby({
   },
   onDesktop: () => app.enterDesktop(),
   onExit: () => app.exitToLobby(),
+  onJumpDay: (day) => {
+    if (!app.isRoomReady()) {
+      lobby?.toast('Apartamentul se incarca inca. Incearca din nou in cateva secunde.')
+      return
+    }
+    if (!vrAvailable) {
+      app.enterDesktop(day)
+      return
+    }
+    lobby?.setBusy(true)
+    void app
+      .enterVR(day)
+      .then(() => lobby?.setBusy(false))
+      .catch((error: unknown) => {
+        lobby?.setBusy(false)
+        lobby?.toast(vrFailureMessage(error))
+      })
+  },
 })
 
 lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)
@@ -109,7 +129,10 @@ function startWatching(): void {
 startWatching()
 
 const requestedMode = params.get('mode')
-if (requestedMode === 'desktop') app.enterDesktop()
+const requestedDay = Number(params.get('day'))
+const startDay =
+  Number.isInteger(requestedDay) && requestedDay >= 15 && requestedDay <= 22 ? requestedDay : 15
+if (requestedMode === 'desktop') app.enterDesktop(startDay)
 const debugParam = params.get('debug')
 if (debugParam === '' || debugParam === '1') app.setDebug(true)
 if (params.has('stereo')) app.setMono(false)
