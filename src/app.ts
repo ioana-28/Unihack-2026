@@ -11,7 +11,7 @@ import { createPrologueScreen } from './scene/prologue'
 import type { PrologueScreen } from './scene/prologue'
 import { createReticle } from './scene/reticle'
 import { createRoom } from './scene/room'
-import type { Room } from './scene/room'
+import type { ModelProgress, Room } from './scene/room'
 import { enterVRSession } from './xr/session'
 
 const EYE_START = new THREE.Vector3(8.074, 1.032, -6.752)
@@ -67,11 +67,12 @@ export class App {
       antialias: true,
       powerPreference: 'high-performance',
     })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.08
     this.renderer.xr.enabled = true
     this.renderer.xr.setReferenceSpaceType('local')
+    this.renderer.xr.setFramebufferScaleFactor(0.75)
     this.installMonoXR()
 
     this.scene.background = new THREE.Color(0x07080a)
@@ -165,6 +166,22 @@ export class App {
   setMono(enabled: boolean): void {
     this.mono = enabled
     this.stereo.setMono(enabled)
+  }
+
+  getModelProgress(): ModelProgress {
+    return this.room.getProgress()
+  }
+
+  isRoomReady(): boolean {
+    return this.room.isReady()
+  }
+
+  getModelError(): unknown | null {
+    return this.room.getError()
+  }
+
+  retryModel(): void {
+    this.room.retry()
   }
 
   private toggleDebug(): void {

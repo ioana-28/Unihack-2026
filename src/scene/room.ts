@@ -1,7 +1,19 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import {
+  dropCached,
+  fetchCachedArrayBuffer,
+  requestPersistentStorage,
+  type LoadProgress,
+} from '../cache'
 
-const MODEL_URL = '/models/romconfort.glb'
+const MODEL_VERSION = '2026-11-14'
+const DEFAULT_MODEL_URL = `/models/romconfort.glb?v=${MODEL_VERSION}`
+const MODEL_URL =
+  new URLSearchParams(window.location.search).get('model') ?? DEFAULT_MODEL_URL
+const MODEL_CACHE = `apartment-model-${MODEL_VERSION}`
+const MAX_ATTEMPTS = 3
+const RETRY_DELAY_MS = 1500
 const HIDDEN_PREFIXES = ['BLK_', 'LBL', 'PLT_AST']
 const HIDDEN_NAMES = new Set(['CEILING_REVIEW'])
 const LIVING_ROOM = {
@@ -12,9 +24,14 @@ const LIVING_ROOM = {
   height: 2.68,
 }
 
+export type ModelProgress = LoadProgress
+
 export type Room = {
   root: THREE.Group
   isReady: () => boolean
+  getProgress: () => ModelProgress
+  getError: () => unknown | null
+  retry: () => void
   dispose: () => void
 }
 
@@ -115,45 +132,90 @@ function addPlaceholder(root: THREE.Group): THREE.Group {
   return group
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function parseModel(loader: GLTFLoader, buffer: ArrayBuffer): Promise<THREE.Group> {
+  return new Promise((resolve, reject) => {
+    loader.parse(buffer, '', (gltf) => resolve(gltf.scene), reject)
+  })
+}
+
 export function createRoom(): Room {
   const root = new THREE.Group()
   root.name = 'apartment'
   addLights(root)
   let placeholder: THREE.Group | null = addPlaceholder(root)
 
+  const loader = new GLTFLoader()
   let model: THREE.Group | null = null
   let ready = false
   let disposed = false
+  let error: unknown | null = null
+  let progress: ModelProgress = { loaded: 0, total: 0 }
+  let request: AbortController | null = null
 
-  const loader = new GLTFLoader()
-  loader.load(
-    MODEL_URL,
-    (gltf) => {
-      if (disposed) {
-        disposeObject(gltf.scene)
+  const load = async (): Promise<void> => {
+    if (disposed || model) return
+    request?.abort()
+    request = new AbortController()
+    ready = false
+    error = null
+    progress = { loaded: 0, total: 0 }
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const buffer = await fetchCachedArrayBuffer(MODEL_URL, {
+          cacheName: MODEL_CACHE,
+          contentType: 'model/gltf-binary',
+          signal: request.signal,
+          onProgress: (next) => {
+            progress = next
+          },
+        })
+        if (disposed) return
+
+        const scene = await parseModel(loader, buffer)
+        if (disposed) {
+          disposeObject(scene)
+          return
+        }
+
+        scene.traverse((object) => {
+          if (shouldHide(object.name)) object.visible = false
+        })
+        model = scene
+        if (placeholder) {
+          root.remove(placeholder)
+          disposeObject(placeholder)
+          placeholder = null
+        }
+        root.add(model)
+        progress = { loaded: progress.total, total: progress.total }
+        ready = true
+        void requestPersistentStorage()
         return
+      } catch (loadError) {
+        if (disposed || request.signal.aborted) return
+        error = loadError
+        console.error(
+          `Failed to load the apartment model (attempt ${attempt}/${MAX_ATTEMPTS})`,
+          loadError,
+        )
+        await dropCached(MODEL_CACHE, MODEL_URL)
+        if (attempt < MAX_ATTEMPTS) await delay(RETRY_DELAY_MS * attempt)
       }
-      gltf.scene.traverse((object) => {
-        if (shouldHide(object.name)) object.visible = false
-      })
-      model = gltf.scene
-      if (placeholder) {
-        root.remove(placeholder)
-        disposeObject(placeholder)
-        placeholder = null
-      }
-      root.add(model)
-      ready = true
-    },
-    undefined,
-    (error: unknown) => {
-      console.error('Failed to load the apartment model', error)
-      ready = true
-    },
-  )
+    }
+
+    ready = true
+  }
+
+  void load()
 
   const dispose = (): void => {
     disposed = true
+    request?.abort()
     if (model) {
       root.remove(model)
       disposeObject(model)
@@ -166,5 +228,14 @@ export function createRoom(): Room {
     }
   }
 
-  return { root, isReady: () => ready, dispose }
+  return {
+    root,
+    isReady: () => ready,
+    getProgress: () => progress,
+    getError: () => error,
+    retry: () => {
+      if (!disposed) void load()
+    },
+    dispose,
+  }
 }

@@ -8,6 +8,13 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "tunnel": "cloudflared tunnel --url http://localhost:5173",
+    "tunnel:preview": "cloudflared tunnel --url http://localhost:4173",
+    "reverse:preview": "adb reverse tcp:4173 tcp:4173",
+    "reverse:dev": "adb reverse tcp:5173 tcp:5173",
+    "tailscale:login": "node scripts/tailscale.mjs up",
+    "tailscale:serve": "node scripts/tailscale.mjs serve --bg 4173",
+    "tailscale:status": "node scripts/tailscale.mjs serve status",
+    "tailscale:url": "node scripts/tailscale.mjs url",
     "smoke": "node scripts/smoke.mjs",
     "poster": "node scripts/poster.mjs",
     "typecheck": "tsc --noEmit"

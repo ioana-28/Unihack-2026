@@ -1,7 +1,7 @@
 import './lobby/lobby.css'
 import { App } from './app'
 import { mountLobby } from './lobby/lobby'
-import type { Lobby } from './lobby/lobby'
+import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
 
 const params = new URLSearchParams(window.location.search)
@@ -27,6 +27,10 @@ const vrStatus = vrAvailable
 
 lobby = mountLobby({
   onEnter: () => {
+    if (!app.isRoomReady()) {
+      lobby?.toast('Apartamentul se incarca inca. Incearca din nou in cateva secunde.')
+      return
+    }
     lobby?.setBusy(true)
     void app
       .enterVR()
@@ -41,14 +45,68 @@ lobby = mountLobby({
 })
 
 lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)
-lobby.setEntry({
+
+const entryState: EntryState = {
   target: 'vr',
-  label: 'Intră în VR',
+  label: 'Intra in VR',
   hint: vrAvailable
-    ? 'WebXR. Așezat, cu telefonul în cască.'
-    : 'WebXR necesită HTTPS și un browser compatibil.',
+    ? 'WebXR. Asezat, cu telefonul in casca.'
+    : 'WebXR necesita HTTPS si un browser compatibil.',
   showDesktop: true,
-})
+}
+
+let watchTimer = 0
+let reportedError = false
+
+function stopWatching(): void {
+  if (watchTimer !== 0) {
+    window.clearInterval(watchTimer)
+    watchTimer = 0
+  }
+}
+
+function updateEntry(): boolean {
+  if (app.isRoomReady()) {
+    const failure = app.getModelError()
+    lobby?.setEntry({
+      ...entryState,
+      hint: failure
+        ? 'Apartamentul nu s-a putut incarca. Se foloseste sala simpla.'
+        : entryState.hint,
+    })
+    if (failure && !reportedError) {
+      reportedError = true
+      lobby?.toast('Apartamentul nu s-a putut descarca. Verifica conexiunea si incearca din nou.', {
+        label: 'Reincearca',
+        run: () => {
+          app.retryModel()
+          startWatching()
+        },
+      })
+    }
+    return true
+  }
+
+  const { loaded, total } = app.getModelProgress()
+  const percent = total > 0 ? Math.min(99, Math.max(1, Math.round((loaded / total) * 100))) : 0
+  lobby?.setEntry({
+    ...entryState,
+    hint: percent > 0 ? `Se incarca apartamentul... ${percent}%` : 'Se incarca apartamentul...',
+    disabled: vrAvailable,
+  })
+  return false
+}
+
+function startWatching(): void {
+  stopWatching()
+  reportedError = false
+  if (updateEntry()) return
+  watchTimer = window.setInterval(() => {
+    if (updateEntry()) stopWatching()
+  }, 250)
+}
+
+startWatching()
 
 const requestedMode = params.get('mode')
 if (requestedMode === 'desktop') app.enterDesktop()

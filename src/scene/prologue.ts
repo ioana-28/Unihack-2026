@@ -1,6 +1,12 @@
 import * as THREE from 'three'
+import { fetchCachedBlob } from '../cache'
 import { canvasTexture } from '../textures'
 
+const PROLOGUE_VERSION = '2026-11-14'
+const DEFAULT_VIDEO_URL = `/media/prologue.mp4?v=${PROLOGUE_VERSION}`
+const VIDEO_URL =
+  new URLSearchParams(window.location.search).get('video') ?? DEFAULT_VIDEO_URL
+const VIDEO_CACHE = `apartment-video-${PROLOGUE_VERSION}`
 const SCREEN_DISTANCE = 2
 const BACKDROP_OVERSCAN = 1.3
 const FADE_SECONDS = 1
@@ -26,7 +32,6 @@ export function createPrologueScreen(
   object.visible = false
 
   const video = document.createElement('video')
-  video.src = '/media/prologue.mp4'
   video.preload = 'auto'
   video.loop = false
   video.muted = false
@@ -36,6 +41,25 @@ export function createPrologueScreen(
   video.style.cssText =
     'position:fixed;left:-1px;top:-1px;width:1px;height:1px;opacity:0;pointer-events:none;'
   document.body.append(video)
+
+  let videoObjectUrl: string | null = null
+
+  const loadVideo = async (): Promise<void> => {
+    try {
+      const blob = await fetchCachedBlob(VIDEO_URL, {
+        cacheName: VIDEO_CACHE,
+        contentType: 'video/mp4',
+      })
+      videoObjectUrl = URL.createObjectURL(blob)
+      video.src = videoObjectUrl
+    } catch (error) {
+      console.error('Failed to cache the prologue video; falling back to the network', error)
+      video.src = VIDEO_URL
+    }
+    video.load()
+  }
+
+  void loadVideo()
 
   const texture = new THREE.VideoTexture(video)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -209,6 +233,7 @@ export function createPrologueScreen(
     video.removeAttribute('src')
     video.load()
     video.remove()
+    if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl)
     texture.dispose()
     poster.dispose()
     loadingTexture.dispose()
