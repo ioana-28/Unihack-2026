@@ -62,7 +62,7 @@ The renderer is **monoscopic by default**: the same camera image is submitted to
 | Lobby | **Intră în VR** starts WebXR. WebXR is the only VR entry; there is no Cardboard fallback. **Deschide pe desktop** opens the mouse and keyboard view |
 | VR prologue | Plays automatically and fills the view. Look around with the headset; the screen follows the head. When the film ends it fades into the room |
 | Desktop | Fullscreen on entry. Drag to look. W A S D or the arrow keys to move. **Esc** returns to the lobby |
-| Room | Look with the headset. Hold your gaze on an object for about 1.5 seconds to interact |
+| Room | Look with the headset. Hold your gaze on an object or on a navigation tag for about 1.5 seconds to interact or move |
 | HUD | **Ieși** leaves desktop mode |
 | Debug | **Ctrl+Shift+`** or `?debug` toggles the free-fly debug camera. See below |
 

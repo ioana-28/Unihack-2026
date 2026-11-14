@@ -6,11 +6,26 @@ const PROGRESS_RADIUS = 50
 const PROGRESS_LINE = 6
 const PROMPT_WIDTH = 512
 const PROMPT_HEIGHT = 96
+const NAV_WIDTH = 1024
+const NAV_HEIGHT = 320
+const NAV_PLANE_WIDTH = 0.56
+const NAV_PLANE_HEIGHT = (NAV_PLANE_WIDTH * NAV_HEIGHT) / NAV_WIDTH
+const NAV_OFFSET_Y = -0.1125
+const NAV_BAR_X = 80
+const NAV_BAR_Y = 206
+const NAV_BAR_WIDTH = NAV_WIDTH - NAV_BAR_X * 2
+const NAV_BAR_HEIGHT = 58
+const NAV_BAR_PLANE_LEFT = (NAV_BAR_X / NAV_WIDTH - 0.5) * NAV_PLANE_WIDTH
+const NAV_BAR_PLANE_WIDTH = (NAV_BAR_WIDTH / NAV_WIDTH) * NAV_PLANE_WIDTH
+const NAV_BAR_PLANE_HEIGHT = (NAV_BAR_HEIGHT / NAV_HEIGHT) * NAV_PLANE_HEIGHT
+const NAV_BAR_PLANE_Y =
+  (0.5 - (NAV_BAR_Y + NAV_BAR_HEIGHT / 2) / NAV_HEIGHT) * NAV_PLANE_HEIGHT
 
 export type Reticle = {
   group: THREE.Group
   setProgress: (progress: number) => void
   setPrompt: (text: string | null) => void
+  setNavigation: (label: string | null, progress: number) => void
   dispose: () => void
 }
 
@@ -95,10 +110,48 @@ export function createReticle(): Reticle {
   prompt.renderOrder = 12
   prompt.visible = false
 
-  group.add(ring, dot, progress, prompt)
+  const navCanvas = createCanvas(NAV_WIDTH, NAV_HEIGHT)
+  const navMaterial = new THREE.MeshBasicMaterial({
+    map: navCanvas.texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    fog: false,
+  })
+  const navGroup = new THREE.Group()
+  navGroup.position.set(0, NAV_OFFSET_Y, 0)
+  navGroup.visible = false
+
+  const nav = new THREE.Mesh(
+    new THREE.PlaneGeometry(NAV_PLANE_WIDTH, NAV_PLANE_HEIGHT),
+    navMaterial,
+  )
+  nav.renderOrder = 13
+  navGroup.add(nav)
+
+  const navFillMaterial = new THREE.MeshBasicMaterial({
+    color: 0xf4c583,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    fog: false,
+  })
+  const navFill = new THREE.Mesh(
+    new THREE.PlaneGeometry(NAV_BAR_PLANE_WIDTH, NAV_BAR_PLANE_HEIGHT),
+    navFillMaterial,
+  )
+  navFill.position.set(NAV_BAR_PLANE_LEFT + NAV_BAR_PLANE_WIDTH / 2, NAV_BAR_PLANE_Y, 0)
+  navFill.renderOrder = 14
+  navFill.visible = false
+  navGroup.add(navFill)
+
+  group.add(ring, dot, progress, prompt, navGroup)
 
   let lastProgress = -1
   let currentPrompt: string | null = null
+  let currentNavigation: string | null = null
 
   const drawProgress = (value: number): void => {
     const ctx = progressCanvas.ctx
@@ -160,6 +213,56 @@ export function createReticle(): Reticle {
     prompt.visible = true
   }
 
+  const drawNavigation = (label: string): void => {
+    const ctx = navCanvas.ctx
+    const { width, height } = navCanvas.canvas
+    ctx.clearRect(0, 0, width, height)
+
+    roundedRect(ctx, 5, 5, width - 10, height - 10, 48)
+    ctx.fillStyle = 'rgba(9, 9, 8, 0.92)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(224, 160, 68, 0.85)'
+    ctx.lineWidth = 5
+    ctx.stroke()
+
+    let fontSize = 100
+    do {
+      ctx.font = `700 ${fontSize}px system-ui, "Segoe UI", sans-serif`
+      fontSize -= 4
+    } while (ctx.measureText(label).width > width - 120 && fontSize >= 40)
+
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#f7eeda'
+    ctx.fillText(label, width / 2, 112)
+
+    const radius = NAV_BAR_HEIGHT / 2
+    ctx.fillStyle = 'rgba(243, 232, 211, 0.22)'
+    roundedRect(ctx, NAV_BAR_X, NAV_BAR_Y, NAV_BAR_WIDTH, NAV_BAR_HEIGHT, radius)
+    ctx.fill()
+  }
+
+  const setNavigation = (label: string | null, value: number): void => {
+    if (!label) {
+      currentNavigation = null
+      navGroup.visible = false
+      navFill.visible = false
+      return
+    }
+
+    if (label !== currentNavigation) {
+      currentNavigation = label
+      drawNavigation(label)
+      navCanvas.texture.needsUpdate = true
+    }
+
+    const clamped = THREE.MathUtils.clamp(value, 0, 1)
+    navFill.visible = clamped > 0
+    navFill.scale.x = clamped
+    navFill.position.x = NAV_BAR_PLANE_LEFT + (NAV_BAR_PLANE_WIDTH * clamped) / 2
+    navGroup.visible = true
+  }
+
   const dispose = (): void => {
     ring.geometry.dispose()
     dot.geometry.dispose()
@@ -170,7 +273,12 @@ export function createReticle(): Reticle {
     prompt.geometry.dispose()
     promptMaterial.dispose()
     promptCanvas.texture.dispose()
+    nav.geometry.dispose()
+    navMaterial.dispose()
+    navCanvas.texture.dispose()
+    navFill.geometry.dispose()
+    navFillMaterial.dispose()
   }
 
-  return { group, setProgress, setPrompt, dispose }
+  return { group, setProgress, setPrompt, setNavigation, dispose }
 }

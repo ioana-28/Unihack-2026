@@ -44,7 +44,7 @@ export function createHintPanel(): HintPanel {
 
     ctx.fillStyle = '#c2b49b'
     ctx.font = '400 38px system-ui, "Segoe UI", sans-serif'
-    ctx.fillText('ca să interacționezi cu un obiect', width / 2, 166)
+    ctx.fillText('ca să interacționezi sau să te deplasezi', width / 2, 166)
   })
 
   const material = new THREE.MeshBasicMaterial({

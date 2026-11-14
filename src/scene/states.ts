@@ -12,8 +12,8 @@ export type InteractablePrompts = Record<string, string>
 
 export type StateDef = {
   label: string
+  tag?: string
   position: Vec3
-  markerY?: number
   facing: string
   interactables: InteractablePrompts | null
 }
@@ -49,8 +49,8 @@ for (const [id, state] of Object.entries(data.states)) {
   if (![x, y, z].every((value) => Number.isFinite(value))) {
     fail(`state "${id}" has a non-numeric position`)
   }
-  if (state.markerY !== undefined && !Number.isFinite(state.markerY)) {
-    fail(`state "${id}" has a non-numeric markerY`)
+  if (state.tag !== undefined && (typeof state.tag !== 'string' || state.tag.trim() === '')) {
+    fail(`state "${id}" has an empty tag`)
   }
   if (!state.interactables) continue
   for (const [key, prompt] of Object.entries(state.interactables)) {

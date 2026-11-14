@@ -1,22 +1,16 @@
 import * as THREE from 'three'
-import { createAdjacency, getState, STATE_IDS, STATES } from './states'
+import { createAdjacency, getState, STATES } from './states'
 import type { StateId } from './states'
 import type { Reticle } from './reticle'
 
 const DWELL_SECONDS = 1.5
-const MARKER_Y = 0.03
-const MARKER_OPACITY = 0.55
-const HIT_RADIUS = 0.2
+const NAV_GAZE_ANGLE = THREE.MathUtils.degToRad(20)
+const NAV_MIN_DISTANCE = 0.6
+const CLICK_RADIUS = 0.18
 const CLICK_SLOP = 5
 const RAYCAST_INTERVAL = 0.15
 const FLASH_MS = 800
 const ORIGIN = new THREE.Vector2(0, 0)
-
-type Marker = {
-  group: THREE.Group
-  ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>
-  hit: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
-}
 
 type GazeTarget =
   | { kind: 'state'; id: StateId }
@@ -58,86 +52,55 @@ function isVisible(object: THREE.Object3D): boolean {
   return true
 }
 
-function createMarker(id: StateId): Marker {
-  const state = getState(id)
-  const group = new THREE.Group()
-  group.name = `teleport-marker:${id}`
-  group.position.set(state.position.x, state.markerY ?? MARKER_Y, state.position.z)
-  group.visible = false
-
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xf4c583,
-    transparent: true,
-    opacity: MARKER_OPACITY,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-    fog: false,
-    side: THREE.DoubleSide,
-  })
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.115, 40), material)
-  ring.rotation.x = -Math.PI / 2
-  ring.renderOrder = 5
-
-  const hitMaterial = new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    colorWrite: false,
-    depthTest: false,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const hit = new THREE.Mesh(new THREE.CircleGeometry(HIT_RADIUS, 32), hitMaterial)
-  hit.rotation.x = -Math.PI / 2
-
-  group.add(ring, hit)
-  return { group, ring, hit }
-}
-
 export function createInteractionController(
   options: InteractionOptions,
 ): InteractionController {
   const { camera, rig, world, room, isRoomReady, reticle, canvas, onDesktopArrive } = options
 
   const adjacency = createAdjacency()
-  const markers = new Map<StateId, Marker>()
-  const stateForHit = new Map<THREE.Object3D, StateId>()
+  const stateWorldPositions = new Map<StateId, THREE.Vector3>()
   const rootForKey = new Map<THREE.Object3D, Interactable>()
   const raycaster = new THREE.Raycaster()
-  const pointer = new THREE.Vector2()
   const destination = new THREE.Vector3()
-
-  const markersRoot = new THREE.Group()
-  markersRoot.name = 'teleport-markers'
-  world.add(markersRoot)
-
-  for (const id of STATE_IDS) {
-    const marker = createMarker(id)
-    markers.set(id, marker)
-    stateForHit.set(marker.hit, id)
-    markersRoot.add(marker.group)
-  }
+  const eye = new THREE.Vector3()
+  const forward = new THREE.Vector3()
+  const toTarget = new THREE.Vector3()
+  const projected = new THREE.Vector3()
+  const cameraSpace = new THREE.Vector3()
 
   let current = STATES.spawn
   let mode: InteractionMode = 'desktop'
   let active = false
   let target: GazeTarget | null = null
   let interactableRoots: THREE.Object3D[] = []
+  let navigationIds: StateId[] = []
   let dwell = 0
   let armed = true
   let flashUntil = 0
   let rayTimer = 0
   let resolved = false
-  let hitTargets: THREE.Object3D[] = []
   let pointerDownX = 0
   let pointerDownY = 0
 
   const adjacentTo = (id: StateId): StateId[] => adjacency.get(id) ?? []
 
-  const resetProgress = (): void => {
-    for (const marker of markers.values()) {
-      marker.ring.scale.setScalar(1)
-      marker.ring.material.opacity = MARKER_OPACITY
+  const navigationLabel = (id: StateId): string => {
+    const state = getState(id)
+    return state.tag ?? state.label
+  }
+
+  const updateNavigationTargets = (): void => {
+    navigationIds = adjacentTo(current)
+    world.updateMatrixWorld(true)
+    for (const id of navigationIds) {
+      const state = getState(id)
+      let point = stateWorldPositions.get(id)
+      if (!point) {
+        point = new THREE.Vector3()
+        stateWorldPositions.set(id, point)
+      }
+      point.set(state.position.x, state.position.y, state.position.z)
+      world.localToWorld(point)
     }
   }
 
@@ -165,11 +128,11 @@ export function createInteractionController(
       reticle.setPrompt('ok')
       return
     }
-    if (armed && target?.kind === 'object') {
-      reticle.setPrompt(target.prompt)
+    if (target?.kind !== 'object') {
+      reticle.setPrompt(null)
       return
     }
-    reticle.setPrompt(null)
+    reticle.setPrompt(armed ? target.prompt : null)
   }
 
   const clearGaze = (): void => {
@@ -179,17 +142,10 @@ export function createInteractionController(
     flashUntil = 0
     reticle.setProgress(0)
     reticle.setPrompt(null)
+    reticle.setNavigation(null, 0)
   }
 
   const refresh = (): void => {
-    const adjacent = new Set(adjacentTo(current))
-    hitTargets = []
-    for (const [id, marker] of markers) {
-      const show = active && id !== current && adjacent.has(id)
-      marker.group.visible = show
-      if (show) hitTargets.push(marker.hit)
-    }
-
     resolved = false
     rootForKey.clear()
     interactableRoots = []
@@ -198,8 +154,8 @@ export function createInteractionController(
       resolved = true
     }
 
+    updateNavigationTargets()
     clearGaze()
-    resetProgress()
   }
 
   const teleportTo = (id: StateId): void => {
@@ -267,22 +223,12 @@ export function createInteractionController(
     return false
   }
 
-  const acquire = (): GazeTarget | null => {
-    camera.updateMatrixWorld()
+  const acquireObject = (): GazeTarget | null => {
+    if (interactableRoots.length === 0) return null
     raycaster.setFromCamera(ORIGIN, camera)
-
-    const candidates: THREE.Object3D[] = hitTargets.slice()
-    for (const interactableRoot of interactableRoots) candidates.push(interactableRoot)
-    if (candidates.length === 0) return null
-
-    const hits = raycaster.intersectObjects(candidates, true)
+    const hits = raycaster.intersectObject(room, true)
     for (const hit of hits) {
       if (!isVisible(hit.object)) continue
-      const stateId = stateForHit.get(hit.object)
-      if (stateId) {
-        if (isOccluded(hit, null)) return null
-        return { kind: 'state', id: stateId }
-      }
       const interactable = resolveObject(hit.object)
       if (interactable) {
         if (isOccluded(hit, resolveInteractableRoot(hit.object))) return null
@@ -290,6 +236,37 @@ export function createInteractionController(
       }
     }
     return null
+  }
+
+  const acquireNavigation = (): GazeTarget | null => {
+    if (navigationIds.length === 0) return null
+
+    camera.getWorldPosition(eye)
+    camera.getWorldDirection(forward)
+
+    let best: StateId | null = null
+    let bestAngle = NAV_GAZE_ANGLE
+
+    for (const id of navigationIds) {
+      const point = stateWorldPositions.get(id)
+      if (!point) continue
+      toTarget.subVectors(point, eye)
+      const distance = toTarget.length()
+      if (distance < NAV_MIN_DISTANCE) continue
+      toTarget.multiplyScalar(1 / distance)
+      const angle = Math.acos(THREE.MathUtils.clamp(toTarget.dot(forward), -1, 1))
+      if (angle >= bestAngle) continue
+      best = id
+      bestAngle = angle
+    }
+
+    return best ? { kind: 'state', id: best } : null
+  }
+
+  const acquire = (): GazeTarget | null => {
+    camera.updateMatrixWorld()
+    world.updateMatrixWorld(true)
+    return acquireObject() ?? acquireNavigation()
   }
 
   const update = (delta: number): void => {
@@ -313,8 +290,8 @@ export function createInteractionController(
         target = next
         dwell = 0
         flashUntil = 0
-        resetProgress()
         reticle.setProgress(0)
+        reticle.setNavigation(next?.kind === 'state' ? navigationLabel(next.id) : null, 0)
         if (next === null) armed = true
         updatePrompt()
       }
@@ -324,12 +301,7 @@ export function createInteractionController(
 
     if (target.kind === 'state') {
       dwell += delta
-      const progress = Math.min(dwell / DWELL_SECONDS, 1)
-      const marker = markers.get(target.id)
-      if (marker) {
-        marker.ring.scale.setScalar(1 + progress * 0.35)
-        marker.ring.material.opacity = MARKER_OPACITY + (1 - MARKER_OPACITY) * progress
-      }
+      reticle.setNavigation(navigationLabel(target.id), Math.min(dwell / DWELL_SECONDS, 1))
       if (dwell >= DWELL_SECONDS) teleportTo(target.id)
       return
     }
@@ -352,19 +324,31 @@ export function createInteractionController(
   const pickFromPointer = (event: PointerEvent): StateId | null => {
     const rect = canvas.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return null
-    pointer.set(
-      ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -((event.clientY - rect.top) / rect.height) * 2 + 1,
-    )
+
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const radius = Math.min(rect.width, rect.height) * CLICK_RADIUS
+    let best: StateId | null = null
+    let bestDistance = radius
+
     camera.updateMatrixWorld()
     world.updateMatrixWorld(true)
-    raycaster.setFromCamera(pointer, camera)
-    const hits = raycaster.intersectObjects(hitTargets, false)
-    for (const hit of hits) {
-      const id = stateForHit.get(hit.object)
-      if (id) return id
+
+    for (const id of navigationIds) {
+      const point = stateWorldPositions.get(id)
+      if (!point) continue
+      cameraSpace.copy(point).applyMatrix4(camera.matrixWorldInverse)
+      if (cameraSpace.z >= 0) continue
+      projected.copy(point).project(camera)
+      const px = (projected.x * 0.5 + 0.5) * rect.width
+      const py = (-projected.y * 0.5 + 0.5) * rect.height
+      const distance = Math.hypot(x - px, y - py)
+      if (distance >= bestDistance) continue
+      best = id
+      bestDistance = distance
     }
-    return null
+
+    return best
   }
 
   const setEnabled = (enabled: boolean): void => {
@@ -377,23 +361,19 @@ export function createInteractionController(
     dwell = 0
     armed = true
     flashUntil = 0
-    hitTargets = []
     reticle.setProgress(0)
     reticle.setPrompt(null)
-    resetProgress()
-    for (const marker of markers.values()) marker.group.visible = false
+    reticle.setNavigation(null, 0)
   }
 
   const setMode = (next: InteractionMode): void => {
     mode = next
     clearGaze()
-    resetProgress()
   }
 
   const reset = (): void => {
     current = STATES.spawn
     clearGaze()
-    resetProgress()
     if (active) refresh()
   }
 
@@ -414,8 +394,7 @@ export function createInteractionController(
     if (!active || mode !== 'desktop') return
     if (!/^Digit[1-9]$/.test(event.code)) return
     const index = Number(event.code.slice(5)) - 1
-    const ids = STATE_IDS.filter((id) => adjacentTo(current).includes(id))
-    const id = ids[index]
+    const id = navigationIds[index]
     if (!id) return
     event.preventDefault()
     teleportTo(id)
@@ -431,13 +410,6 @@ export function createInteractionController(
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
     window.removeEventListener('keydown', handleKeyDown)
-    world.remove(markersRoot)
-    for (const marker of markers.values()) {
-      marker.ring.geometry.dispose()
-      marker.ring.material.dispose()
-      marker.hit.geometry.dispose()
-      marker.hit.material.dispose()
-    }
   }
 
   return {
