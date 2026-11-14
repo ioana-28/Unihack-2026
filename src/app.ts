@@ -5,12 +5,13 @@ import { DebugControls } from './debug/debug'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { createHintPanel } from './scene/hint'
+import { createInteractionController } from './scene/interaction'
+import type { InteractionController } from './scene/interaction'
 import { createPrologueScreen } from './scene/prologue'
 import type { PrologueScreen } from './scene/prologue'
+import { createReticle } from './scene/reticle'
 import { createRoom } from './scene/room'
 import type { Room } from './scene/room'
-import { createTeleportController } from './scene/teleport'
-import type { TeleportController } from './scene/teleport'
 import { enterVRSession } from './xr/session'
 
 const EYE_START = new THREE.Vector3(8.074, 1.032, -6.752)
@@ -23,28 +24,6 @@ const CARDBOARD_HUD_DISTANCE = 10
 const WEBXR_HUD_DISTANCE = 50
 const RETICLE_REFERENCE = 1.1
 const HINT_REFERENCE = 1.2
-
-function createReticle(): THREE.Group {
-  const group = new THREE.Group()
-  group.visible = false
-
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xf4c583,
-    transparent: true,
-    opacity: 0.6,
-    depthTest: false,
-    depthWrite: false,
-    fog: false,
-  })
-
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.013, 0.0165, 40), material)
-  ring.renderOrder = 10
-  const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0032, 16), material)
-  dot.renderOrder = 10
-
-  group.add(ring, dot)
-  return group
-}
 
 function requestOrientationPermission(): Promise<void> {
   const constructor = window.DeviceOrientationEvent as unknown as {
@@ -71,7 +50,7 @@ export class App {
   private readonly stereo: StereoEffect
   private readonly orientation: OrientationControls
   private readonly debug: DebugControls
-  private readonly teleport: TeleportController
+  private readonly interaction: InteractionController
   private readonly timer = new THREE.Timer()
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   private readonly onModeChange: (mode: Mode) => void
@@ -109,7 +88,7 @@ export class App {
     this.world.add(this.room.root)
     this.scene.add(this.world)
 
-    this.camera.add(this.reticle)
+    this.camera.add(this.reticle.group)
     this.camera.add(this.hint.object)
 
     this.prologue = createPrologueScreen(
@@ -131,10 +110,13 @@ export class App {
       rig: this.rig,
       room: this.room.root,
     })
-    this.teleport = createTeleportController({
+    this.interaction = createInteractionController({
       camera: this.camera,
       rig: this.rig,
       world: this.world,
+      room: this.room.root,
+      isRoomReady: () => this.room.isReady(),
+      reticle: this.reticle,
       canvas,
       onDesktopArrive: (eyeHeight) => this.controls.setEyeHeight(eyeHeight),
     })
@@ -158,15 +140,17 @@ export class App {
     this.controls.pitch = this.camera.rotation.x
     this.controls.setEyeHeight(EYE_START.y)
     this.controls.setEnabled(true)
-    this.teleport.reset()
-    this.teleport.setMode('desktop')
-    this.teleport.setEnabled(true)
+    this.reticle.group.visible = true
+    this.interaction.reset()
+    this.interaction.setMode('desktop')
+    this.interaction.setEnabled(true)
     this.setMode('desktop')
   }
 
   exitToLobby(): void {
     if (this.mode !== 'desktop') return
-    this.teleport.setEnabled(false)
+    this.interaction.setEnabled(false)
+    this.reticle.group.visible = false
     this.controls.setEnabled(false)
     this.exitFullscreen()
     this.setMode('lobby')
@@ -192,17 +176,18 @@ export class App {
         this.controls.yaw = pose.yaw
         this.controls.pitch = pose.pitch
         this.controls.setEnabled(true)
-        this.teleport.setEnabled(true)
+        this.interaction.setEnabled(true)
+        this.reticle.group.visible = true
       }
       this.updateViewport()
       return
     }
 
     if (this.mode === 'vr' || this.mode === 'cardboard') return
-    this.teleport.setEnabled(false)
+    this.interaction.setEnabled(false)
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
-    this.reticle.visible = false
+    this.reticle.group.visible = false
     this.hint.object.visible = false
     this.debug.activate()
   }
@@ -223,11 +208,11 @@ export class App {
       this.camera.rotation.set(0, 0, 0)
       this.camera.position.set(0, 0, 0)
       this.setHudDistance(WEBXR_HUD_DISTANCE)
-      this.reticle.visible = false
+      this.reticle.group.visible = false
       this.hint.object.visible = false
-      this.teleport.reset()
-      this.teleport.setMode('vr')
-      this.teleport.setEnabled(false)
+      this.interaction.reset()
+      this.interaction.setMode('vr')
+      this.interaction.setEnabled(false)
       this.prologue.start()
       this.setMode('vr')
 
@@ -248,7 +233,7 @@ export class App {
     this.world.position.set(0, 0, 0)
     this.world.rotation.set(0, 0, 0)
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
-    this.reticle.visible = false
+    this.reticle.group.visible = false
     this.hint.object.visible = false
     this.prologue.start()
     this.setMode('cardboard')
@@ -274,10 +259,10 @@ export class App {
 
   exitCardboard(): void {
     if (this.mode !== 'cardboard') return
-    this.teleport.setEnabled(false)
+    this.interaction.setEnabled(false)
     this.prologue.stop()
     this.orientation.setEnabled(false)
-    this.reticle.visible = false
+    this.reticle.group.visible = false
     this.hint.object.visible = false
     this.camera.position.copy(EYE_START)
     this.camera.rotation.set(LOBBY_PITCH, LOBBY_YAW, 0)
@@ -291,12 +276,12 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
-    this.teleport.setEnabled(false)
-    this.teleport.reset()
+    this.interaction.setEnabled(false)
+    this.interaction.reset()
     this.prologue.stop()
     this.world.position.set(0, 0, 0)
     this.world.rotation.set(0, 0, 0)
-    this.reticle.visible = false
+    this.reticle.group.visible = false
     this.hint.object.visible = false
     this.camera.position.copy(EYE_START)
     this.camera.rotation.set(LOBBY_PITCH, LOBBY_YAW, 0)
@@ -316,7 +301,8 @@ export class App {
     this.orientation.dispose()
     this.controls.dispose()
     this.debug.dispose()
-    this.teleport.dispose()
+    this.interaction.dispose()
+    this.reticle.dispose()
     this.room.dispose()
     this.prologue.dispose()
     this.renderer.dispose()
@@ -352,15 +338,15 @@ export class App {
   private readonly handlePrologueEnd = (): void => {
     if (this.mode !== 'vr' && this.mode !== 'cardboard') return
     this.camera.focus = CARDBOARD_HUD_DISTANCE
-    this.reticle.visible = true
-    this.teleport.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
-    this.teleport.setEnabled(true)
+    this.reticle.group.visible = true
+    this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
+    this.interaction.setEnabled(true)
     this.showHint()
   }
 
   private setHudDistance(distance: number): void {
-    this.reticle.position.set(0, 0, -distance)
-    this.reticle.scale.setScalar(distance / RETICLE_REFERENCE)
+    this.reticle.group.position.set(0, 0, -distance)
+    this.reticle.group.scale.setScalar(distance / RETICLE_REFERENCE)
     this.hint.object.position.set(0, -0.3 * (distance / HINT_REFERENCE), -distance)
     this.hint.object.scale.setScalar(distance / HINT_REFERENCE)
   }
@@ -482,14 +468,14 @@ export class App {
 
     if (this.mode === 'desktop') {
       this.controls.update(delta)
-      this.teleport.update(delta)
+      this.interaction.update(delta)
       this.renderer.render(this.scene, this.camera)
       return
     }
 
     if (this.mode === 'vr') {
       this.prologue.update(delta)
-      this.teleport.update(delta)
+      this.interaction.update(delta)
       this.renderer.render(this.scene, this.camera)
       return
     }

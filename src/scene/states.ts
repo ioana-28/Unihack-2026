@@ -8,11 +8,14 @@ export type Vec3 = {
   z: number
 }
 
+export type InteractablePrompts = Record<string, string>
+
 export type StateDef = {
   label: string
   position: Vec3
+  markerY?: number
   facing: string
-  interactables: string[] | null
+  interactables: InteractablePrompts | null
 }
 
 export type Transition = {
@@ -45,6 +48,18 @@ for (const [id, state] of Object.entries(data.states)) {
   const { x, y, z } = state.position
   if (![x, y, z].every((value) => Number.isFinite(value))) {
     fail(`state "${id}" has a non-numeric position`)
+  }
+  if (state.markerY !== undefined && !Number.isFinite(state.markerY)) {
+    fail(`state "${id}" has a non-numeric markerY`)
+  }
+  if (!state.interactables) continue
+  for (const [key, prompt] of Object.entries(state.interactables)) {
+    if (!Object.prototype.hasOwnProperty.call(data.objects, key)) {
+      fail(`state "${id}" references unknown object "${key}"`)
+    }
+    if (typeof prompt !== 'string' || prompt.trim() === '') {
+      fail(`state "${id}" has an empty prompt for "${key}"`)
+    }
   }
 }
 

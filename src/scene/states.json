@@ -7,19 +7,30 @@
       "label": "Living room - couch facing the TV",
       "position": { "x": 8.074, "y": 1.032, "z": -6.752 },
       "facing": "tv",
-      "interactables": ["newspaper", "phone", "tv"]
+      "markerY": 0.42,
+      "interactables": {
+        "newspaper": "Citește ziarul",
+        "phone": "Răspunde la telefon",
+        "tv": "Privește televizorul"
+      }
     },
     "livingPhone": {
       "label": "Living room - standing by the phone",
       "position": { "x": 7.035, "y": 1.192, "z": -5.025 },
       "facing": "phone",
-      "interactables": ["phone", "calendar"]
+      "interactables": {
+        "phone": "Răspunde la telefon",
+        "calendar": "Privește calendarul"
+      }
     },
     "livingChair": {
       "label": "Living room - chair",
       "position": { "x": 8.643, "y": 1.019, "z": -5.133 },
+      "markerY": 0.40,
       "facing": "radio",
-      "interactables": ["radio"]
+      "interactables": {
+        "radio": "Pornește radioul"
+      }
     },
     "hallByLiving": {
       "label": "Hallway - outside the living room",
@@ -49,7 +60,9 @@
       "label": "Bathroom",
       "position": { "x": 4.579, "y": 1.272, "z": -5.72 },
       "facing": "bathtub",
-      "interactables": ["bathtub"]
+      "interactables": {
+        "bathtub": "Deschide robinetul"
+      }
     }
   },
   "objects": {

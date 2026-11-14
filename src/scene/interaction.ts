@@ -1,12 +1,15 @@
 import * as THREE from 'three'
 import { createAdjacency, getState, STATE_IDS, STATES } from './states'
 import type { StateId } from './states'
+import type { Reticle } from './reticle'
 
 const DWELL_SECONDS = 1.5
 const MARKER_Y = 0.03
 const MARKER_OPACITY = 0.55
 const HIT_RADIUS = 0.2
 const CLICK_SLOP = 5
+const RAYCAST_INTERVAL = 0.1
+const FLASH_MS = 800
 const ORIGIN = new THREE.Vector2(0, 0)
 
 type Marker = {
@@ -15,30 +18,51 @@ type Marker = {
   hit: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
 }
 
-export type TeleportMode = 'desktop' | 'vr'
+type GazeTarget =
+  | { kind: 'state'; id: StateId }
+  | { kind: 'object'; key: string; prompt: string }
 
-export type TeleportOptions = {
+type Interactable = {
+  key: string
+  prompt: string
+}
+
+export type InteractionMode = 'desktop' | 'vr'
+
+export type InteractionOptions = {
   camera: THREE.PerspectiveCamera
   rig: THREE.Object3D
   world: THREE.Object3D
+  room: THREE.Object3D
+  isRoomReady: () => boolean
+  reticle: Reticle
   canvas: HTMLCanvasElement
   onDesktopArrive?: (eyeHeight: number) => void
 }
 
-export type TeleportController = {
+export type InteractionController = {
   update: (delta: number) => void
   setEnabled: (enabled: boolean) => void
-  setMode: (mode: TeleportMode) => void
+  setMode: (mode: InteractionMode) => void
   reset: () => void
   dispose: () => void
   currentStateId: () => StateId
+}
+
+function isVisible(object: THREE.Object3D): boolean {
+  let current: THREE.Object3D | null = object
+  while (current) {
+    if (!current.visible) return false
+    current = current.parent
+  }
+  return true
 }
 
 function createMarker(id: StateId): Marker {
   const state = getState(id)
   const group = new THREE.Group()
   group.name = `teleport-marker:${id}`
-  group.position.set(state.position.x, MARKER_Y, state.position.z)
+  group.position.set(state.position.x, state.markerY ?? MARKER_Y, state.position.z)
   group.visible = false
 
   const material = new THREE.MeshBasicMaterial({
@@ -70,12 +94,15 @@ function createMarker(id: StateId): Marker {
   return { group, ring, hit }
 }
 
-export function createTeleportController(options: TeleportOptions): TeleportController {
-  const { camera, rig, world, canvas, onDesktopArrive } = options
+export function createInteractionController(
+  options: InteractionOptions,
+): InteractionController {
+  const { camera, rig, world, room, isRoomReady, reticle, canvas, onDesktopArrive } = options
 
   const adjacency = createAdjacency()
   const markers = new Map<StateId, Marker>()
   const stateForHit = new Map<THREE.Object3D, StateId>()
+  const rootForKey = new Map<THREE.Object3D, Interactable>()
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const destination = new THREE.Vector3()
@@ -92,10 +119,15 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
   }
 
   let current = STATES.spawn
-  let mode: TeleportMode = 'desktop'
+  let mode: InteractionMode = 'desktop'
   let active = false
-  let target: StateId | null = null
+  let target: GazeTarget | null = null
+  let interactableRoots: THREE.Object3D[] = []
   let dwell = 0
+  let armed = true
+  let flashUntil = 0
+  let rayTimer = 0
+  let resolved = false
   let hitTargets: THREE.Object3D[] = []
   let pointerDownX = 0
   let pointerDownY = 0
@@ -109,6 +141,46 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
     }
   }
 
+  const resolveInteractables = (): void => {
+    rootForKey.clear()
+    interactableRoots = []
+    const prompts = getState(current).interactables
+    if (!prompts) return
+    for (const [key, prompt] of Object.entries(prompts)) {
+      const nodeName = STATES.objects[key]
+      if (!nodeName) continue
+      const sanitized = THREE.PropertyBinding.sanitizeNodeName(nodeName)
+      const node = room.getObjectByName(sanitized) ?? room.getObjectByName(nodeName)
+      if (!node) {
+        console.warn(`Interaction: object "${nodeName}" for "${key}" not found`)
+        continue
+      }
+      rootForKey.set(node, { key, prompt })
+      interactableRoots.push(node)
+    }
+  }
+
+  const updatePrompt = (): void => {
+    if (flashUntil > performance.now()) {
+      reticle.setPrompt('ok')
+      return
+    }
+    if (armed && target?.kind === 'object') {
+      reticle.setPrompt(target.prompt)
+      return
+    }
+    reticle.setPrompt(null)
+  }
+
+  const clearGaze = (): void => {
+    target = null
+    dwell = 0
+    armed = true
+    flashUntil = 0
+    reticle.setProgress(0)
+    reticle.setPrompt(null)
+  }
+
   const refresh = (): void => {
     const adjacent = new Set(adjacentTo(current))
     hitTargets = []
@@ -117,8 +189,16 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
       marker.group.visible = show
       if (show) hitTargets.push(marker.hit)
     }
-    target = null
-    dwell = 0
+
+    resolved = false
+    rootForKey.clear()
+    interactableRoots = []
+    if (isRoomReady()) {
+      resolveInteractables()
+      resolved = true
+    }
+
+    clearGaze()
     resetProgress()
   }
 
@@ -140,22 +220,101 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
     refresh()
   }
 
-  const setTarget = (id: StateId | null, delta: number): void => {
-    if (id !== target) {
-      target = id
-      dwell = 0
-      resetProgress()
+  const sameTarget = (a: GazeTarget | null, b: GazeTarget | null): boolean => {
+    if (a === null || b === null) return a === b
+    if (a.kind !== b.kind) return false
+    if (a.kind === 'state' && b.kind === 'state') return a.id === b.id
+    if (a.kind === 'object' && b.kind === 'object') return a.key === b.key
+    return false
+  }
+
+  const resolveObject = (object: THREE.Object3D): Interactable | null => {
+    let currentObject: THREE.Object3D | null = object
+    while (currentObject && currentObject !== room) {
+      const entry = rootForKey.get(currentObject)
+      if (entry) return entry
+      currentObject = currentObject.parent
     }
-    if (!id) return
+    return null
+  }
+
+  const acquire = (): GazeTarget | null => {
+    camera.updateMatrixWorld()
+    world.updateMatrixWorld(true)
+    raycaster.setFromCamera(ORIGIN, camera)
+
+    const candidates: THREE.Object3D[] = hitTargets.slice()
+    if (interactableRoots.length > 0) candidates.push(room)
+    const hits = raycaster.intersectObjects(candidates, true)
+
+    for (const hit of hits) {
+      if (!isVisible(hit.object)) continue
+      const stateId = stateForHit.get(hit.object)
+      if (stateId) return { kind: 'state', id: stateId }
+      const interactable = resolveObject(hit.object)
+      if (interactable) {
+        return { kind: 'object', key: interactable.key, prompt: interactable.prompt }
+      }
+      return null
+    }
+    return null
+  }
+
+  const update = (delta: number): void => {
+    if (!active) return
+
+    if (!resolved && isRoomReady()) {
+      resolveInteractables()
+      resolved = true
+    }
+
+    if (flashUntil > 0 && performance.now() >= flashUntil) {
+      flashUntil = 0
+      updatePrompt()
+    }
+
+    rayTimer += delta
+    if (rayTimer >= RAYCAST_INTERVAL) {
+      rayTimer = 0
+      const next = acquire()
+      if (!sameTarget(next, target)) {
+        target = next
+        dwell = 0
+        flashUntil = 0
+        resetProgress()
+        reticle.setProgress(0)
+        if (next === null) armed = true
+        updatePrompt()
+      }
+    }
+
+    if (!target) return
+
+    if (target.kind === 'state') {
+      dwell += delta
+      const progress = Math.min(dwell / DWELL_SECONDS, 1)
+      const marker = markers.get(target.id)
+      if (marker) {
+        marker.ring.scale.setScalar(1 + progress * 0.35)
+        marker.ring.material.opacity = MARKER_OPACITY + (1 - MARKER_OPACITY) * progress
+      }
+      if (dwell >= DWELL_SECONDS) teleportTo(target.id)
+      return
+    }
+
+    if (!armed) return
 
     dwell += delta
     const progress = Math.min(dwell / DWELL_SECONDS, 1)
-    const marker = markers.get(id)
-    if (marker) {
-      marker.ring.scale.setScalar(1 + progress * 0.35)
-      marker.ring.material.opacity = MARKER_OPACITY + (1 - MARKER_OPACITY) * progress
+    reticle.setProgress(progress)
+    if (dwell >= DWELL_SECONDS) {
+      console.log('ok')
+      armed = false
+      dwell = 0
+      flashUntil = performance.now() + FLASH_MS
+      reticle.setProgress(0)
+      reticle.setPrompt('ok')
     }
-    if (dwell >= DWELL_SECONDS) teleportTo(id)
   }
 
   const pickFromPointer = (event: PointerEvent): StateId | null => {
@@ -176,23 +335,6 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
     return null
   }
 
-  const update = (delta: number): void => {
-    if (!active || mode !== 'vr') return
-    camera.updateMatrixWorld()
-    world.updateMatrixWorld(true)
-    raycaster.setFromCamera(ORIGIN, camera)
-    const hits = raycaster.intersectObjects(hitTargets, false)
-    let id: StateId | null = null
-    for (const hit of hits) {
-      const found = stateForHit.get(hit.object)
-      if (found && adjacentTo(current).includes(found)) {
-        id = found
-        break
-      }
-    }
-    setTarget(id, delta)
-  }
-
   const setEnabled = (enabled: boolean): void => {
     active = enabled
     if (enabled) {
@@ -201,20 +343,25 @@ export function createTeleportController(options: TeleportOptions): TeleportCont
     }
     target = null
     dwell = 0
+    armed = true
+    flashUntil = 0
     hitTargets = []
+    reticle.setProgress(0)
+    reticle.setPrompt(null)
     resetProgress()
     for (const marker of markers.values()) marker.group.visible = false
   }
 
-  const setMode = (next: TeleportMode): void => {
+  const setMode = (next: InteractionMode): void => {
     mode = next
-    target = null
-    dwell = 0
+    clearGaze()
     resetProgress()
   }
 
   const reset = (): void => {
     current = STATES.spawn
+    clearGaze()
+    resetProgress()
     if (active) refresh()
   }
 
