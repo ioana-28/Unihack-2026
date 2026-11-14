@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "spawn": "livingCouch",
+  "coordinateSpace": "apartment model world space, metres, y = eye height",
+  "states": {
+    "livingCouch": {
+      "label": "Living room - couch facing the TV",
+      "position": { "x": 8.074, "y": 1.032, "z": -6.752 },
+      "facing": "tv",
+      "interactables": ["newspaper", "phone", "tv"]
+    },
+    "livingPhone": {
+      "label": "Living room - standing by the phone",
+      "position": { "x": 7.035, "y": 1.192, "z": -5.025 },
+      "facing": "phone",
+      "interactables": ["phone", "calendar"]
+    },
+    "livingChair": {
+      "label": "Living room - chair",
+      "position": { "x": 8.643, "y": 1.019, "z": -5.133 },
+      "facing": "radio",
+      "interactables": ["radio"]
+    },
+    "hallByLiving": {
+      "label": "Hallway - outside the living room",
+      "position": { "x": 4.336, "y": 1.272, "z": -4.183 },
+      "facing": "balconyRail",
+      "interactables": null
+    },
+    "hallCenter": {
+      "label": "Hallway - center, all rooms visible",
+      "position": { "x": 4.577, "y": 1.272, "z": -2.895 },
+      "facing": "sofa",
+      "interactables": null
+    },
+    "hallEntry": {
+      "label": "Hallway - front door",
+      "position": { "x": 6.317, "y": 1.272, "z": -1.458 },
+      "facing": "entryDoor",
+      "interactables": null
+    },
+    "kitchen": {
+      "label": "Kitchen",
+      "position": { "x": 8.525, "y": 1.272, "z": -2.737 },
+      "facing": "kitchenCounter",
+      "interactables": null
+    },
+    "bathroom": {
+      "label": "Bathroom",
+      "position": { "x": 4.579, "y": 1.272, "z": -5.72 },
+      "facing": "bathtub",
+      "interactables": ["bathtub"]
+    }
+  },
+  "objects": {
+    "tv": "PROP_LIV_TV",
+    "newspaper": "Newspaper2",
+    "phone": "Antique_1930s_Rotary_Telephone001",
+    "calendar": "Mesh_0",
+    "radio": "Antique_Radio",
+    "balconyRail": "BAL_RAIL_GLASS",
+    "sofa": "FUR_LIV_Sofa",
+    "entryDoor": "OPEN_D_ENTRY_leaf",
+    "kitchenCounter": "FUR_KT_Counter",
+    "bathtub": "FIX_BAIE_Bathtub"
+  },
+  "transitions": [
+    { "a": "livingCouch", "b": "livingPhone" },
+    { "a": "livingCouch", "b": "livingChair" },
+    { "a": "livingPhone", "b": "livingChair" },
+    { "a": "livingPhone", "b": "hallByLiving" },
+    { "a": "hallByLiving", "b": "hallCenter" },
+    { "a": "hallCenter", "b": "hallEntry" },
+    { "a": "hallCenter", "b": "kitchen" },
+    { "a": "hallByLiving", "b": "bathroom" }
+  ]
+}
