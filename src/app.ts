@@ -11,6 +11,8 @@ import type { Mode } from './mode'
 import { createHintPanel } from './scene/hint'
 import { createInteractionController } from './scene/interaction'
 import type { InteractionController } from './scene/interaction'
+import { createNewspaperPopup } from './scene/newspaper'
+import type { NewspaperPopup } from './scene/newspaper'
 import { createPrologueScreen } from './scene/prologue'
 import type { PrologueScreen } from './scene/prologue'
 import { createReticle } from './scene/reticle'
@@ -49,6 +51,7 @@ export class App {
   private readonly room: Room
   private readonly reticle = createReticle()
   private readonly hint = createHintPanel()
+  private readonly newspaper: NewspaperPopup
   private readonly prologue: PrologueScreen
   private readonly controls: DesktopControls
   private readonly stereo: StereoEffect
@@ -103,6 +106,14 @@ export class App {
     this.camera.add(this.reticle.group)
     this.camera.add(this.hint.object)
 
+    this.newspaper = createNewspaperPopup({
+      camera: this.camera,
+      canvas,
+      reticle: this.reticle,
+      onClose: () => this.handleNewspaperClose(),
+    })
+    this.scene.add(this.newspaper.object)
+
     this.prologue = createPrologueScreen(
       this.camera,
       () => this.room.isReady(),
@@ -110,9 +121,13 @@ export class App {
     )
     this.camera.add(this.prologue.object)
 
-    this.controls = new DesktopControls(canvas, this.camera, EYE_START.y, () =>
-      this.exitToLobby(),
-    )
+    this.controls = new DesktopControls(canvas, this.camera, EYE_START.y, () => {
+      if (this.newspaper.isOpen()) {
+        this.closeNewspaper()
+        return
+      }
+      this.exitToLobby()
+    })
     this.stereo = new StereoEffect(this.renderer)
     this.stereo.setMono(this.mono)
     this.orientation = new OrientationControls(this.camera)
@@ -134,6 +149,7 @@ export class App {
       isObjectActive: (key) => this.runner.isActive(key),
       onActivate: (key) => this.runner.onActivate(key),
       isNavigationLocked: () => this.runner.isNavigationLocked(),
+      onObjectActivate: (key) => this.handleObjectActivate(key),
     })
     this.audio = new GameAudio(this.camera)
     this.overlay = new Overlay(this.scene, this.camera)
@@ -193,6 +209,7 @@ export class App {
   exitToLobby(): void {
     if (this.mode !== 'desktop') return
     this.runner.stop()
+    this.newspaper.close()
     this.interaction.setEnabled(false)
     this.reticle.group.visible = false
     this.controls.setEnabled(false)
@@ -227,6 +244,27 @@ export class App {
     this.room.retry()
   }
 
+  private handleObjectActivate(key: string): void {
+    if (key !== 'newspaper') return
+    if (this.mode !== 'desktop' && this.mode !== 'vr') return
+    this.hint.object.visible = false
+    this.interaction.setEnabled(false)
+    this.reticle.setProgress(0)
+    this.reticle.setPrompt(null)
+    this.newspaper.open()
+  }
+
+  private handleNewspaperClose(): void {
+    if (this.mode !== 'desktop' && this.mode !== 'vr') return
+    this.interaction.setEnabled(true)
+  }
+
+  private closeNewspaper(): void {
+    if (!this.newspaper.isOpen()) return
+    this.newspaper.close()
+    this.handleNewspaperClose()
+  }
+
   private toggleDebug(): void {
     if (this.debug.isActive()) {
       const pose = this.debug.getPose()
@@ -244,6 +282,7 @@ export class App {
     }
 
     if (this.mode === 'vr' || this.mode === 'cardboard') return
+    this.newspaper.close()
     this.interaction.setEnabled(false)
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
@@ -337,6 +376,7 @@ export class App {
 
   exitCardboard(): void {
     if (this.mode !== 'cardboard') return
+    this.newspaper.close()
     this.interaction.setEnabled(false)
     this.prologue.stop()
     this.orientation.setEnabled(false)
@@ -355,6 +395,7 @@ export class App {
 
   private readonly handleSessionEnd = (): void => {
     this.runner.stop()
+    this.newspaper.close()
     this.interaction.setEnabled(false)
     this.interaction.reset()
     this.prologue.stop()
@@ -384,6 +425,7 @@ export class App {
     this.overlay.dispose()
     this.audio.dispose()
     this.interaction.dispose()
+    this.newspaper.dispose()
     this.reticle.dispose()
     this.room.dispose()
     this.prologue.dispose()
@@ -497,6 +539,11 @@ export class App {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === 'Escape' && this.newspaper.isOpen()) {
+      event.preventDefault()
+      this.closeNewspaper()
+      return
+    }
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'Backquote') {
       event.preventDefault()
       this.toggleDebug()
@@ -565,6 +612,7 @@ export class App {
 
     if (this.mode === 'desktop') {
       this.controls.update(delta)
+      this.newspaper.update(delta)
       this.interaction.update(delta)
       this.updateGame(delta, time)
       this.renderer.render(this.scene, this.camera)
@@ -573,6 +621,7 @@ export class App {
 
     if (this.mode === 'vr') {
       this.prologue.update(delta)
+      this.newspaper.update(delta)
       this.interaction.update(delta)
       this.updateGame(delta, time)
       this.renderer.render(this.scene, this.camera)

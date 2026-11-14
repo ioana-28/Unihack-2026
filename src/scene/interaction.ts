@@ -38,6 +38,8 @@ export type InteractionOptions = {
   onActivate?: (key: string) => void
   /** Day logic: true while a scene runs, so gaze navigation is off. */
   isNavigationLocked?: () => boolean
+  /** Called after the "ok" flash, e.g. to open the newspaper popup. */
+  onObjectActivate?: (key: string) => void
 }
 
 export type InteractionController = {
@@ -68,7 +70,17 @@ function isVisible(object: THREE.Object3D): boolean {
 export function createInteractionController(
   options: InteractionOptions,
 ): InteractionController {
-  const { camera, rig, world, room, isRoomReady, reticle, canvas, onDesktopArrive } = options
+  const {
+    camera,
+    rig,
+    world,
+    room,
+    isRoomReady,
+    reticle,
+    canvas,
+    onDesktopArrive,
+    onObjectActivate,
+  } = options
   const isObjectActive = options.isObjectActive ?? (() => true)
   const isNavigationLocked = options.isNavigationLocked ?? (() => false)
 
@@ -96,6 +108,7 @@ export function createInteractionController(
   let resolved = false
   let pointerDownX = 0
   let pointerDownY = 0
+  let activateTimer = 0
 
   const adjacentTo = (id: StateId): StateId[] => adjacency.get(id) ?? []
 
@@ -117,6 +130,12 @@ export function createInteractionController(
       point.set(state.position.x, state.position.y, state.position.z)
       world.localToWorld(point)
     }
+  }
+
+  const clearActivation = (): void => {
+    if (activateTimer === 0) return
+    window.clearTimeout(activateTimer)
+    activateTimer = 0
   }
 
   const resolveInteractables = (): void => {
@@ -335,6 +354,13 @@ export function createInteractionController(
       flashUntil = performance.now() + FLASH_MS
       reticle.setProgress(0)
       reticle.setPrompt('ok')
+
+      const key = target.key
+      clearActivation()
+      activateTimer = window.setTimeout(() => {
+        activateTimer = 0
+        onObjectActivate?.(key)
+      }, FLASH_MS)
     }
   }
 
@@ -374,6 +400,7 @@ export function createInteractionController(
       refresh()
       return
     }
+    clearActivation()
     target = null
     dwell = 0
     armed = true
@@ -385,11 +412,13 @@ export function createInteractionController(
 
   const setMode = (next: InteractionMode): void => {
     mode = next
+    clearActivation()
     clearGaze()
   }
 
   const reset = (): void => {
     current = STATES.spawn
+    clearActivation()
     clearGaze()
     if (active) refresh()
   }
@@ -423,6 +452,7 @@ export function createInteractionController(
   window.addEventListener('keydown', handleKeyDown)
 
   const dispose = (): void => {
+    clearActivation()
     canvas.removeEventListener('pointerdown', handlePointerDown)
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
