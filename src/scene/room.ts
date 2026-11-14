@@ -52,6 +52,22 @@ function addLights(root: THREE.Group): void {
   const lamp = new THREE.PointLight(0xffb066, 3, 4, 2)
   lamp.position.set(6.35, 1.35, -6.55)
   root.add(lamp)
+
+  const hall = new THREE.PointLight(0xffd2a1, 6, 7, 2)
+  hall.position.set(5.05, 2.4, -3.05)
+  root.add(hall)
+
+  const hallEntry = new THREE.PointLight(0xffc98f, 4, 5, 2)
+  hallEntry.position.set(6.25, 2.4, -1.8)
+  root.add(hallEntry)
+
+  const kitchen = new THREE.PointLight(0xffe0b0, 7, 6, 2)
+  kitchen.position.set(8.5, 2.4, -2.7)
+  root.add(kitchen)
+
+  const bathroom = new THREE.PointLight(0xd7e6ff, 5, 5, 2)
+  bathroom.position.set(4.6, 2.4, -5.7)
+  root.add(bathroom)
 }
 
 function addPlaceholder(root: THREE.Group): THREE.Group {
