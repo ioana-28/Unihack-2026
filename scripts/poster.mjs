@@ -44,7 +44,7 @@ function startServer() {
 html,body{margin:0;padding:0;width:100%;height:100%;background:#080706;overflow:hidden}
 video{display:block;width:100vw;height:100vh;object-fit:cover}
 </style></head>
-<body><video id="v" src="/prologue.mp4" muted playsinline preload="auto"></video></body>
+<body><video id="v" src="/video_intro.mp4" muted playsinline preload="auto"></video></body>
 </html>`
   return createServer((request, response) => {
     if (request.url === '/' || request.url === '/index.html') {

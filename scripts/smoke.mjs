@@ -221,7 +221,7 @@ async function main() {
       'video is present, muted, and not looping',
       await evaluate(
         cdp,
-        "(() => { const video = document.querySelector('#prologue-video'); return video instanceof HTMLVideoElement && video.muted === true && video.loop === false && video.getAttribute('src') === '/media/prologue.mp4' && video.getAttribute('poster') === '/media/prologue-poster.jpg' })()",
+        "(() => { const video = document.querySelector('#prologue-video'); return video instanceof HTMLVideoElement && video.muted === true && video.loop === false && video.getAttribute('src') === '/media/video_intro.mp4' && video.getAttribute('poster') === '/media/prologue-poster.jpg' })()",
       ),
     )
 
