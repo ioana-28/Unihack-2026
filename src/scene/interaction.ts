@@ -38,6 +38,7 @@ export type InteractionOptions = {
   reticle: Reticle
   canvas: HTMLCanvasElement
   onDesktopArrive?: (eyeHeight: number) => void
+  onObjectActivate?: (key: string) => void
 }
 
 export type InteractionController = {
@@ -97,7 +98,17 @@ function createMarker(id: StateId): Marker {
 export function createInteractionController(
   options: InteractionOptions,
 ): InteractionController {
-  const { camera, rig, world, room, isRoomReady, reticle, canvas, onDesktopArrive } = options
+  const {
+    camera,
+    rig,
+    world,
+    room,
+    isRoomReady,
+    reticle,
+    canvas,
+    onDesktopArrive,
+    onObjectActivate,
+  } = options
 
   const adjacency = createAdjacency()
   const markers = new Map<StateId, Marker>()
@@ -131,8 +142,15 @@ export function createInteractionController(
   let hitTargets: THREE.Object3D[] = []
   let pointerDownX = 0
   let pointerDownY = 0
+  let activateTimer = 0
 
   const adjacentTo = (id: StateId): StateId[] => adjacency.get(id) ?? []
+
+  const clearActivation = (): void => {
+    if (activateTimer === 0) return
+    window.clearTimeout(activateTimer)
+    activateTimer = 0
+  }
 
   const resetProgress = (): void => {
     for (const marker of markers.values()) {
@@ -314,6 +332,13 @@ export function createInteractionController(
       flashUntil = performance.now() + FLASH_MS
       reticle.setProgress(0)
       reticle.setPrompt('ok')
+
+      const key = target.key
+      clearActivation()
+      activateTimer = window.setTimeout(() => {
+        activateTimer = 0
+        onObjectActivate?.(key)
+      }, FLASH_MS)
     }
   }
 
@@ -341,6 +366,7 @@ export function createInteractionController(
       refresh()
       return
     }
+    clearActivation()
     target = null
     dwell = 0
     armed = true
@@ -354,12 +380,14 @@ export function createInteractionController(
 
   const setMode = (next: InteractionMode): void => {
     mode = next
+    clearActivation()
     clearGaze()
     resetProgress()
   }
 
   const reset = (): void => {
     current = STATES.spawn
+    clearActivation()
     clearGaze()
     resetProgress()
     if (active) refresh()
@@ -395,6 +423,7 @@ export function createInteractionController(
   window.addEventListener('keydown', handleKeyDown)
 
   const dispose = (): void => {
+    clearActivation()
     canvas.removeEventListener('pointerdown', handlePointerDown)
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
