@@ -85,7 +85,7 @@ export class App {
     this.rig.add(this.camera)
     this.scene.add(this.rig)
 
-    this.room = createRoom()
+    this.room = createRoom(this.renderer)
     this.world.add(this.room.root)
     this.scene.add(this.world)
 

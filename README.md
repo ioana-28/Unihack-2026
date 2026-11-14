@@ -8,7 +8,7 @@ The app enters WebXR only. There is no Cardboard fallback in the lobby. WebXR ne
 
 The prologue introduces Radu Petrescu, a 34 year old design engineer at ELBA, confined with a leg cast after slipping on ice in a pre-dawn food queue. It is a ten second film in five shots. When the VR session starts, the film plays head-locked on a full-view screen, then fades directly into the living room without leaving VR. A narrated voiceover and subtitles will be added to the film later.
 
-The apartment is the exported `romconfort_assets.glb` model, loaded from `public/models/romconfort.glb`. The loader hides the blockout furniture (`BLK_*`), the catalog label plates (`LBL*`, `PLT_AST*`), and the review ceiling. The living room is the starting room: the viewer is seated on the couch facing the TV. The 54 MB file is mostly 4K PNG textures, so it loads slowly on a phone; a compressed export is the next step. Until it is ready, a simple room shell is shown, and the prologue holds its last frame until the model can take over.
+The apartment is the exported `romconfort_assets.glb` model. The 93 MB source lives in `assets/models/romconfort-source.glb`; `npm run model:ktx2` converts its 2K textures to KTX2/ETC1S and writes `public/models/romconfort.glb`. The app loads that file through Three's `KTX2Loader`, so the textures stay GPU-compressed and no longer exhaust phone memory when the room appears. The living room is the starting room: the viewer is seated on the couch facing the TV. The download is cached in Cache Storage after the first successful load, and the lobby shows its progress. Until it is ready, a simple room shell is shown, and the prologue holds its last frame until the model can take over.
 
 The film is a reconstruction, not archival footage. Radu is a fictional character. The setting and the objects in the room come from the documented context of the week.
 
@@ -25,6 +25,8 @@ Open the URL that Vite prints. The lobby opens first. Add `?mode=desktop` to sta
 
 Build the production bundle with `npm run build`.
 
+Rebuild the KTX2 model with `npm run model:ktx2` (pass a quality value with `npm run model:ktx2 -- 192`). It needs KTX-Software 4.4+ with `ktx` on `PATH`, and it reads `assets/models/romconfort-source.glb`. The intermediate PNG file is written to `.artifacts/` and removed when the conversion succeeds.
+
 Regenerate the poster and the five cut frames with `npm run poster`. The script reads `public/media/prologue.mp4` and writes `public/media/prologue-poster.jpg` plus `.artifacts/cuts/`. To capture other times, set `POSTER_CUTS` first.
 
 ```powershell
@@ -37,16 +39,21 @@ npm run poster
 WebXR is required. It needs a trusted HTTPS origin and a browser or headset that reports `immersive-vr`.
 
 1. Start the dev server with `npm run dev`.
-2. Run `npm run tunnel` in a second terminal and open the printed HTTPS URL in Chrome on the Android phone or in the headset browser.
-3. Press **Intră în VR**.
-4. Allow the session if the browser asks.
-5. Put the phone in the headset. The film plays on a full-view screen, then fades into the living room.
+2. Run `npm run tailscale:serve` in a second terminal, then `npm run tailscale:url` to print the stable HTTPS address.
+3. Open that address in Chrome on the phone or in the headset browser. Both devices must be signed into the same Tailscale tailnet.
+4. Press **Intră în VR**.
+5. Allow the session if the browser asks.
+6. Put the phone in the headset. The film plays on a full-view screen, then fades into the living room.
+
+Tailscale Serve keeps the same origin between sessions, so the KTX2 model stays in Cache Storage and later loads do not download it again. A quick `trycloudflare.com` tunnel gets a new hostname on every run, which throws that cache away.
+
+For a cable connection, run `npm run build`, `npm run preview`, then `npm run reverse:preview` and open `http://localhost:4173` on the phone. Localhost is a secure context, so WebXR works and the model travels over USB.
 
 WebXR hands the session and lens calibration to the browser or headset. The lobby status line says `WebXR disponibil` when the session is available, or one of `WebXR cere HTTPS`, `WebXR lipsește din browser`, `WebXR fără immersive-vr` when it is not. Android Chrome with only a Cardboard viewer usually does not expose `immersive-vr`; use a WebXR-capable headset or browser for this build.
 
 The renderer is **monoscopic by default**: the same camera image is submitted to both eye viewports, so both eyes see the TV, reticle, and HUD at the same screen position. This avoids double points on viewers whose IPD or lens alignment is off. Add `?stereo` to the URL for true stereo, where the right eye sees slightly more of the right side because it is physically offset from the left eye.
 
-`npm run tunnel` is optional if you already serve the app over HTTPS.
+`npm run tunnel` is the old cloudflared path and is optional if you already serve the app over HTTPS. Prefer Tailscale Serve or the USB reverse path for phone testing.
 
 ## Controls
 
@@ -76,8 +83,11 @@ Use the copied poses to define transitions, movement bounds, and interactive tar
 
 ```
 index.html            lobby markup
+assets/models/        romconfort-source.glb, the 2K source model
+public/basis/         KTX2/Basis transcoder files used by KTX2Loader
 public/media/         prologue.mp4 and the generated poster
-public/models/        romconfort.glb apartment model
+public/models/        romconfort.glb, the KTX2/ETC1S apartment
+src/cache.ts          Cache Storage download, progress, retries, persistence
 src/main.ts           starts the app, wires the lobby, applies ?mode= and ?debug
 src/app.ts            render loop, camera rig, lobby, desktop, and WebXR transitions
 src/lobby/lobby.ts    lobby wiring and status/toast state
@@ -92,7 +102,9 @@ src/textures.ts       canvas textures for the prologue and the old room pieces
 src/input/desktop.ts  drag look and movement
 src/debug/debug.ts    free-fly debug camera, raycast target, and waypoint HUD
 src/debug/debug.css   debug HUD and crosshair styling
+scripts/ktx2-model.mjs  converts the source model to KTX2/ETC1S
 scripts/poster.mjs    poster and cut frames from prologue.mp4
+scripts/tailscale.mjs locates Tailscale and runs serve/login/url
 scripts/smoke.mjs     stale headless browser check, see below
 ```
 
@@ -114,7 +126,9 @@ Then open the app on the WebXR device and walk the flow by hand.
 
 - Phone-only Cardboard has three degrees of freedom and no position tracking. WebXR headsets can provide position tracking; the app still uses one seated viewpoint.
 - Long documents need a reading mode that leaves stereo, so plan the newspaper and diary UI around that.
-- The apartment model is 54 MB, mostly 4K PNG textures. It loads slowly until it is re-exported with compressed textures and a smaller texture set.
+- The KTX2 apartment is about 100 MB to download, but its textures stay compressed in GPU memory instead of expanding to full RGBA. The first load is still large; it is cached in Cache Storage after a successful download and reused on later loads at the same origin.
+- ETC1S is the smaller KTX2 codec. Normal and metallic-roughness maps can look blocky up close; if quality matters more than memory, rebuild with UASTC for those slots.
+- The room still uses several point lights and a few transmission/clearcoat materials. If the phone renders but the framerate is low, reduce the lights or disable transmission next.
 - The room has no collision, no baked lighting, and no audio. The debug camera is the current way to choose movement limits.
 - The prologue film is a reconstruction with diegetic sound and no voiceover or subtitles yet. It is not an archive recording.
 - The audio fallback can mute the film when the browser blocks playback, which will be more noticeable once the narration lands.

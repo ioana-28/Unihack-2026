@@ -10,9 +10,10 @@
     "tunnel": "cloudflared tunnel --url http://localhost:5173",
     "tunnel:preview": "cloudflared tunnel --url http://localhost:4173",
     "reverse:preview": "adb reverse tcp:4173 tcp:4173",
-    "reverse:dev": "adb reverse tcp:5173 tcp:5173",
+    "reverse:dev": "C:/Users/Ioana/Downloads/platform-tools-latest-windows/platform-tools/adb reverse tcp:5173 tcp:5173",
+    "model:ktx2": "node scripts/ktx2-model.mjs",
     "tailscale:login": "node scripts/tailscale.mjs up",
-    "tailscale:serve": "node scripts/tailscale.mjs serve --bg 4173",
+    "tailscale:serve": "node scripts/tailscale.mjs serve --bg 5173",
     "tailscale:status": "node scripts/tailscale.mjs serve status",
     "tailscale:url": "node scripts/tailscale.mjs url",
     "smoke": "node scripts/smoke.mjs",
@@ -20,9 +21,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "adb": "^0.2.0",
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "@types/three": "^0.187.0",
     "@types/webxr": "^0.5.24",
     "typescript": "~5.9.3",

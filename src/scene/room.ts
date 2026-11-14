@@ -1,13 +1,15 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import {
   dropCached,
+  dropOldModelCaches,
   fetchCachedArrayBuffer,
   requestPersistentStorage,
   type LoadProgress,
 } from '../cache'
 
-const MODEL_VERSION = '2026-11-14'
+const MODEL_VERSION = '2026-11-16-ktx2'
 const DEFAULT_MODEL_URL = `/models/romconfort.glb?v=${MODEL_VERSION}`
 const MODEL_URL =
   new URLSearchParams(window.location.search).get('model') ?? DEFAULT_MODEL_URL
@@ -142,19 +144,25 @@ function parseModel(loader: GLTFLoader, buffer: ArrayBuffer): Promise<THREE.Grou
   })
 }
 
-export function createRoom(): Room {
+export function createRoom(renderer: THREE.WebGLRenderer): Room {
   const root = new THREE.Group()
   root.name = 'apartment'
   addLights(root)
   let placeholder: THREE.Group | null = addPlaceholder(root)
 
+  const ktx2 = new KTX2Loader()
+    .setTranscoderPath('/basis/')
+    .detectSupport(renderer)
   const loader = new GLTFLoader()
+  loader.setKTX2Loader(ktx2)
   let model: THREE.Group | null = null
   let ready = false
   let disposed = false
   let error: unknown | null = null
   let progress: ModelProgress = { loaded: 0, total: 0 }
   let request: AbortController | null = null
+
+  void dropOldModelCaches(MODEL_CACHE)
 
   const load = async (): Promise<void> => {
     if (disposed || model) return
@@ -216,6 +224,7 @@ export function createRoom(): Room {
   const dispose = (): void => {
     disposed = true
     request?.abort()
+    ktx2.dispose()
     if (model) {
       root.remove(model)
       disposeObject(model)

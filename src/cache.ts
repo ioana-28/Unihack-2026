@@ -96,6 +96,20 @@ export async function dropCached(cacheName: string, url: string): Promise<void> 
   await cache?.delete(new Request(url)).catch(() => undefined)
 }
 
+export async function dropOldModelCaches(current: string): Promise<void> {
+  if (!('caches' in window)) return
+  try {
+    const names = await caches.keys()
+    await Promise.all(
+      names
+        .filter((name) => name.startsWith('apartment-model-') && name !== current)
+        .map((name) => caches.delete(name)),
+    )
+  } catch {
+    // Cache Storage can be unavailable; the current model still loads.
+  }
+}
+
 export async function requestPersistentStorage(): Promise<void> {
   if (!navigator.storage) return
   try {
