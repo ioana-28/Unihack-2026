@@ -17,46 +17,44 @@ const app = new App(canvas, (mode) => {
 const secureContext = window.isSecureContext
 const xrPresent = hasXR()
 const vrAvailable = secureContext && xrPresent ? await supportsImmersiveVR() : false
+const vrStatus = vrAvailable
+  ? 'WebXR disponibil'
+  : !secureContext
+    ? 'WebXR cere HTTPS'
+    : !xrPresent
+      ? 'WebXR lipsește din browser'
+      : 'WebXR fără immersive-vr'
 
 lobby = mountLobby({
   onEnter: () => {
-    if (!vrAvailable) {
-      void app.enterCardboard()
-      return
-    }
     lobby?.setBusy(true)
     void app
       .enterVR()
       .then(() => lobby?.setBusy(false))
       .catch((error: unknown) => {
         lobby?.setBusy(false)
-        lobby?.toast(vrFailureMessage(error), {
-          label: 'Continuă în Cardboard',
-          run: () => {
-            void app.enterCardboard()
-          },
-        })
+        lobby?.toast(vrFailureMessage(error))
       })
   },
   onDesktop: () => app.enterDesktop(),
   onExit: () => app.exitToLobby(),
 })
 
-lobby.setStatus(
-  vrAvailable ? 'ok' : 'off',
-  vrAvailable ? 'WebXR disponibil' : 'Mod Cardboard',
-)
+lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)
 lobby.setEntry({
   target: 'vr',
   label: 'Intră în VR',
   hint: vrAvailable
     ? 'WebXR. Așezat, cu telefonul în cască.'
-    : 'Cardboard. Fullscreen, două imagini, giroscop.',
+    : 'WebXR necesită HTTPS și un browser compatibil.',
   showDesktop: true,
 })
 
 const requestedMode = params.get('mode')
 if (requestedMode === 'desktop') app.enterDesktop()
+const debugParam = params.get('debug')
+if (debugParam === '' || debugParam === '1') app.setDebug(true)
+if (params.has('stereo')) app.setMono(false)
 
 function vrFailureMessage(error: unknown): string {
   const name = error instanceof DOMException ? error.name : ''
@@ -64,10 +62,10 @@ function vrFailureMessage(error: unknown): string {
     return 'Browserul a blocat pornirea VR. Permite accesul și încearcă din nou.'
   }
   if (name === 'NotSupportedError') {
-    return 'WebXR nu este disponibil. Poți continua în Cardboard.'
+    return 'WebXR nu este disponibil. Rulează pe HTTPS, într-un browser compatibil WebXR.'
   }
   if (name === 'InvalidStateError') {
     return 'O sesiune VR este deja pornită.'
   }
-  return 'VR nu a pornit. Încearcă din nou sau continuă în Cardboard.'
+  return 'WebXR nu a pornit. Verifică HTTPS și suportul immersive-vr al browserului.'
 }

@@ -1,16 +1,14 @@
 import * as THREE from 'three'
 
-const EYE_HEIGHT = 1.62
 const WALK_SPEED = 1.15
-const MAX_RADIUS = 1.85
 
 export class DesktopControls {
   yaw = 0
   pitch = 0
 
   private readonly camera: THREE.PerspectiveCamera
-  private readonly rig: THREE.Object3D
   private readonly element: HTMLElement
+  private readonly eyeHeight: number
   private readonly onExit: () => void
   private readonly keys = new Set<string>()
   private enabled = false
@@ -21,12 +19,12 @@ export class DesktopControls {
   constructor(
     element: HTMLElement,
     camera: THREE.PerspectiveCamera,
-    rig: THREE.Object3D,
+    eyeHeight: number,
     onExit: () => void,
   ) {
     this.element = element
     this.camera = camera
-    this.rig = rig
+    this.eyeHeight = eyeHeight
     this.onExit = onExit
 
     element.addEventListener('pointerdown', this.handlePointerDown)
@@ -60,19 +58,15 @@ export class DesktopControls {
     if (forward !== 0 || strafe !== 0) {
       const length = Math.hypot(forward, strafe)
       const step = WALK_SPEED * delta
-      this.camera.position.x += (strafe / length) * step
-      this.camera.position.z += (-forward / length) * step
-
-      const radius = Math.hypot(this.camera.position.x, this.camera.position.z)
-      if (radius > MAX_RADIUS) {
-        this.camera.position.x *= MAX_RADIUS / radius
-        this.camera.position.z *= MAX_RADIUS / radius
-      }
+      const sin = Math.sin(this.yaw)
+      const cos = Math.cos(this.yaw)
+      this.camera.position.x += ((-sin * forward + cos * strafe) / length) * step
+      this.camera.position.z += ((-cos * forward - sin * strafe) / length) * step
     }
 
-    this.camera.position.y = EYE_HEIGHT
-    this.rig.rotation.y = this.yaw
-    this.camera.rotation.x = this.pitch
+    this.camera.position.y = this.eyeHeight
+    this.camera.rotation.order = 'YXZ'
+    this.camera.rotation.set(this.pitch, this.yaw, 0)
   }
 
   dispose(): void {

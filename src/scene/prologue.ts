@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { canvasTexture } from '../textures'
 
 const SCREEN_DISTANCE = 2
 const BACKDROP_OVERSCAN = 1.3
@@ -16,6 +17,7 @@ export type PrologueScreen = {
 
 export function createPrologueScreen(
   camera: THREE.PerspectiveCamera,
+  canReveal: () => boolean,
   onEnded: () => void,
 ): PrologueScreen {
   const object = new THREE.Group()
@@ -69,6 +71,34 @@ export function createPrologueScreen(
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), screenMaterial)
   screen.renderOrder = 101
   object.add(screen)
+
+  const loadingTexture = canvasTexture(1024, 160, (ctx, width, height) => {
+    ctx.clearRect(0, 0, width, height)
+    ctx.fillStyle = 'rgba(8, 7, 6, 0.78)'
+    ctx.fillRect(0, 0, width, height)
+    ctx.strokeStyle = 'rgba(224, 160, 68, 0.5)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(1, 1, width - 2, height - 2)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#efe5cf'
+    ctx.font = '500 46px system-ui, "Segoe UI", sans-serif'
+    ctx.fillText('Se încarcă apartamentul…', width / 2, height / 2)
+  })
+  const loadingMaterial = new THREE.MeshBasicMaterial({
+    map: loadingTexture,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: false,
+    depthWrite: false,
+    fog: false,
+    toneMapped: false,
+  })
+  const loading = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.18), loadingMaterial)
+  loading.position.set(0, -1.05, 0.01)
+  loading.renderOrder = 102
+  loading.visible = false
+  object.add(loading)
 
   let state: 'idle' | 'playing' | 'fading' | 'done' = 'idle'
   let opacity = 1
@@ -130,7 +160,9 @@ export function createPrologueScreen(
     opacity = 1
     screenMaterial.opacity = 1
     backdropMaterial.opacity = 1
+    loading.visible = false
     object.visible = true
+    camera.focus = SCREEN_DISTANCE
     video.loop = false
     if (video.readyState >= 1) video.currentTime = 0
     video.addEventListener('ended', handleEnded, { once: true })
@@ -148,6 +180,7 @@ export function createPrologueScreen(
     opacity = 1
     screenMaterial.opacity = 1
     backdropMaterial.opacity = 1
+    loading.visible = false
     object.visible = false
   }
 
@@ -155,6 +188,11 @@ export function createPrologueScreen(
     if (!object.visible) return
     layout()
     if (state !== 'fading') return
+    if (!canReveal()) {
+      loading.visible = true
+      return
+    }
+    loading.visible = false
     opacity = Math.max(0, opacity - delta / FADE_SECONDS)
     screenMaterial.opacity = opacity
     backdropMaterial.opacity = opacity
@@ -173,10 +211,13 @@ export function createPrologueScreen(
     video.remove()
     texture.dispose()
     poster.dispose()
+    loadingTexture.dispose()
     backdropMaterial.dispose()
     screenMaterial.dispose()
+    loadingMaterial.dispose()
     backdrop.geometry.dispose()
     screen.geometry.dispose()
+    loading.geometry.dispose()
   }
 
   return { object, start, stop, update, dispose }

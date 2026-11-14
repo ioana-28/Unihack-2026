@@ -8,6 +8,10 @@ export class StereoEffect {
     this.stereo.aspect = 0.5
   }
 
+  setMono(mono: boolean): void {
+    this.stereo.eyeSep = mono ? 0 : 0.064
+  }
+
   render(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
     scene.updateMatrixWorld()
     if (camera.parent === null) camera.updateMatrixWorld()
