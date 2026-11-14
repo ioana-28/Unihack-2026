@@ -3,7 +3,7 @@ import { fetchCachedBlob } from '../cache'
 import { canvasTexture } from '../textures'
 
 const PROLOGUE_VERSION = '2026-11-14'
-const DEFAULT_VIDEO_URL = `/media/prologue.mp4?v=${PROLOGUE_VERSION}`
+const DEFAULT_VIDEO_URL = `/media/video_intro.mp4?v=${PROLOGUE_VERSION}`
 const VIDEO_URL =
   new URLSearchParams(window.location.search).get('video') ?? DEFAULT_VIDEO_URL
 const VIDEO_CACHE = `apartment-video-${PROLOGUE_VERSION}`
