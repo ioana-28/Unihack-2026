@@ -4,6 +4,8 @@ import { StereoEffect } from './cardboard/stereo'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { createHintPanel } from './scene/hint'
+import { createPrologueScreen } from './scene/prologue'
+import type { PrologueScreen } from './scene/prologue'
 import { createRoom } from './scene/room'
 import type { Room } from './scene/room'
 import { enterVRSession } from './xr/session'
@@ -60,6 +62,7 @@ export class App {
   private readonly room: Room
   private readonly reticle = createReticle()
   private readonly hint = createHintPanel()
+  private readonly prologue: PrologueScreen
   private readonly controls: DesktopControls
   private readonly stereo: StereoEffect
   private readonly orientation: OrientationControls
@@ -99,6 +102,9 @@ export class App {
 
     this.camera.add(this.reticle)
     this.camera.add(this.hint.object)
+
+    this.prologue = createPrologueScreen(this.camera, () => this.handlePrologueEnd())
+    this.camera.add(this.prologue.object)
 
     this.controls = new DesktopControls(canvas, this.camera, this.rig, () =>
       this.exitToLobby(),
@@ -148,8 +154,9 @@ export class App {
       this.camera.rotation.set(0, 0, 0)
       this.camera.position.set(0, 0, 0)
       this.setHudDistance(WEBXR_HUD_DISTANCE)
-      this.reticle.visible = true
-      this.showHint()
+      this.reticle.visible = false
+      this.hint.object.visible = false
+      this.prologue.start()
       this.setMode('vr')
 
       session.addEventListener('end', this.handleSessionEnd, { once: true })
@@ -168,8 +175,9 @@ export class App {
     this.camera.rotation.set(0, 0, 0)
     this.world.position.y = 0
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
-    this.reticle.visible = true
-    this.showHint()
+    this.reticle.visible = false
+    this.hint.object.visible = false
+    this.prologue.start()
     this.setMode('cardboard')
     this.updateViewport()
 
@@ -192,6 +200,7 @@ export class App {
 
   exitCardboard(): void {
     if (this.mode !== 'cardboard') return
+    this.prologue.stop()
     this.orientation.setEnabled(false)
     this.reticle.visible = false
     this.hint.object.visible = false
@@ -205,6 +214,7 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
+    this.prologue.stop()
     this.world.position.y = 0
     this.reticle.visible = false
     this.hint.object.visible = false
@@ -226,6 +236,7 @@ export class App {
     this.orientation.dispose()
     this.controls.dispose()
     this.room.dispose()
+    this.prologue.dispose()
     this.renderer.dispose()
   }
 
@@ -233,6 +244,12 @@ export class App {
     this.hint.object.visible = true
     this.hint.material.opacity = 0.95
     this.hintUntil = performance.now() + HINT_DURATION
+  }
+
+  private readonly handlePrologueEnd = (): void => {
+    if (this.mode !== 'vr' && this.mode !== 'cardboard') return
+    this.reticle.visible = true
+    this.showHint()
   }
 
   private setHudDistance(distance: number): void {
@@ -353,10 +370,12 @@ export class App {
     }
 
     if (this.mode === 'vr') {
+      this.prologue.update(delta)
       this.renderer.render(this.scene, this.camera)
       return
     }
 
+    this.prologue.update(delta)
     this.orientation.update()
     this.stereo.render(this.scene, this.camera)
   }

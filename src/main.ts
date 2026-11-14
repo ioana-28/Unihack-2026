@@ -4,6 +4,7 @@ import { mountLobby } from './lobby/lobby'
 import type { Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
 
+const params = new URLSearchParams(window.location.search)
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')
 if (!canvas) throw new Error('Element not found: #stage')
 
@@ -54,7 +55,7 @@ lobby.setEntry({
   showDesktop: true,
 })
 
-const requestedMode = new URLSearchParams(window.location.search).get('mode')
+const requestedMode = params.get('mode')
 if (requestedMode === 'desktop') app.enterDesktop()
 
 function vrFailureMessage(error: unknown): string {

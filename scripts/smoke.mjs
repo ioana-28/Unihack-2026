@@ -128,6 +128,12 @@ async function evaluate(cdp, expression) {
   return response.result.value
 }
 
+async function shot(cdp, name) {
+  await sleep(250)
+  const image = await cdp.send('Page.captureScreenshot', { format: 'png' })
+  await writeFile(join(ARTIFACTS, name), Buffer.from(image.data, 'base64'))
+}
+
 async function main() {
   await mkdir(ARTIFACTS, { recursive: true })
   const preview = startPreview()
@@ -170,7 +176,131 @@ async function main() {
     )
 
     check(
-      'lobby is the initial mode',
+      'prologue is the initial view',
+      await evaluate(
+        cdp,
+        "document.body.dataset.view === 'prologue' && getComputedStyle(document.querySelector('#prologue')).display !== 'none' && getComputedStyle(document.querySelector('#lobby')).display === 'none'",
+      ),
+    )
+    check(
+      'prologue carries the title and dateline',
+      await evaluate(
+        cdp,
+        "document.querySelector('#prologue h1')?.textContent?.trim() === 'Apartamentul' && document.querySelector('.prologue__dateline')?.textContent?.includes('15 decembrie 1989')",
+      ),
+    )
+    check(
+      'five beats carry the film times',
+      await evaluate(
+        cdp,
+        "(() => { const beats = [...document.querySelectorAll('.prologue__beat')]; return beats.length === 5 && beats.map((beat) => beat.dataset.time).join(',') === '0,2,4,6,8.3' })()",
+      ),
+    )
+    check(
+      'dossier names Radu and stamps fiction',
+      await evaluate(
+        cdp,
+        "(() => { const text = document.querySelector('#prologue-dossier').textContent; return text.includes('Dosar personal') && text.includes('Radu Petrescu') && text.includes('ELBA') && text.includes('Ficțiune') })()",
+      ),
+    )
+    check(
+      'week lists eight days with the 15th current',
+      await evaluate(
+        cdp,
+        "(() => { const days = [...document.querySelectorAll('.prologue__day')]; return days.length === 8 && days[0].classList.contains('is-current') && days[0].textContent.includes('15') && days[1].classList.contains('is-marked') })()",
+      ),
+    )
+    check(
+      'CTA opens the apartment',
+      await evaluate(
+        cdp,
+        "(() => { const button = document.querySelector('#prologue-cta'); return button.textContent.includes('Deschide fereastra') && button.textContent.includes('Prologul se închide') })()",
+      ),
+    )
+    check(
+      'video is present, muted, and not looping',
+      await evaluate(
+        cdp,
+        "(() => { const video = document.querySelector('#prologue-video'); return video instanceof HTMLVideoElement && video.muted === true && video.loop === false && video.getAttribute('src') === '/media/prologue.mp4' && video.getAttribute('poster') === '/media/prologue-poster.jpg' })()",
+      ),
+    )
+
+    await sleep(800)
+    check(
+      'prologue video plays muted',
+      await evaluate(
+        cdp,
+        "(() => { const video = document.querySelector('#prologue-video'); return video.paused === false && video.currentTime >= 0 })()",
+      ),
+    )
+
+    await shot(cdp, 'prologue.png')
+
+    await evaluate(
+      cdp,
+      "document.querySelectorAll('.prologue__beat')[2].scrollIntoView({ block: 'center' })",
+    )
+    await sleep(600)
+    const beatState = await evaluate(
+      cdp,
+      "(() => { const beat = document.querySelectorAll('.prologue__beat')[2]; const video = document.querySelector('#prologue-video'); return { active: beat.classList.contains('is-active'), time: Number(beat.dataset.time), current: video.currentTime } })()",
+    )
+    check(
+      'a visible beat seeks the film',
+      beatState.active &&
+        beatState.current >= beatState.time - 0.1 &&
+        beatState.current <= beatState.time + 1.2,
+    )
+    await shot(cdp, 'prologue-beats.png')
+
+    await evaluate(
+      cdp,
+      "document.querySelector('#prologue-dossier').scrollIntoView({ block: 'center' })",
+    )
+    await shot(cdp, 'prologue-dossier.png')
+
+    await evaluate(cdp, "window.scrollTo({ top: 0, behavior: 'auto' })")
+    await sleep(250)
+
+    check(
+      'sound toggle unmutes and relabels',
+      await evaluate(
+        cdp,
+        "(() => { const button = document.querySelector('#prologue-sound'); button.click(); const video = document.querySelector('#prologue-video'); return video.muted === false && button.getAttribute('aria-pressed') === 'true' && button.textContent.trim() === 'Fără sunet' })()",
+      ),
+    )
+    check(
+      'sound toggle restores the mute',
+      await evaluate(
+        cdp,
+        "(() => { const button = document.querySelector('#prologue-sound'); button.click(); const video = document.querySelector('#prologue-video'); return video.muted === true && button.getAttribute('aria-pressed') === 'false' && button.textContent.trim() === 'Sunet' })()",
+      ),
+    )
+
+    check(
+      'CTA opens the entry view',
+      await evaluate(
+        cdp,
+        "(() => { document.querySelector('#prologue-cta').click(); return document.body.dataset.view === 'entry' && getComputedStyle(document.querySelector('#lobby')).display !== 'none' && document.querySelector('#prologue').inert === true && document.querySelector('#lobby').inert === false })()",
+      ),
+    )
+    check(
+      'entry focuses the apartment action',
+      await evaluate(cdp, "document.activeElement?.id === 'enter'"),
+    )
+    check(
+      'entry pauses the film',
+      await evaluate(cdp, "document.querySelector('#prologue-video').paused === true"),
+    )
+    await sleep(700)
+    check(
+      'entry hides the prologue after the fade',
+      await evaluate(cdp, "document.querySelector('#prologue').hidden === true"),
+    )
+    await shot(cdp, 'entry.png')
+
+    check(
+      'entry shows the lobby',
       await evaluate(
         cdp,
         "document.body.dataset.mode === 'lobby' && getComputedStyle(document.querySelector('#lobby')).display !== 'none'",
@@ -282,6 +412,24 @@ async function main() {
       await evaluate(cdp, "document.body.dataset.mode === 'cardboard'"),
     )
     check(
+      'cardboard starts the prologue film',
+      await evaluate(
+        cdp,
+        "(() => { const video = document.querySelector('#prologue-video'); return video.currentTime > 0 && video.paused === false })()",
+      ),
+    )
+
+    await sleep(11500)
+    const cardboardRoomShot = await cdp.send('Page.captureScreenshot', { format: 'png' })
+    await writeFile(
+      join(ARTIFACTS, 'cardboard-room.png'),
+      Buffer.from(cardboardRoomShot.data, 'base64'),
+    )
+    check(
+      'cardboard ends the prologue film',
+      await evaluate(cdp, "document.querySelector('#prologue-video').ended === true"),
+    )
+    check(
       'escape leaves cardboard',
       await evaluate(
         cdp,
@@ -309,6 +457,52 @@ async function main() {
       ),
     )
 
+    check(
+      'replay returns to the prologue',
+      await evaluate(
+        cdp,
+        "(() => { document.querySelector('#prologue-replay').click(); return document.body.dataset.view === 'prologue' && document.querySelector('#prologue').hidden === false && getComputedStyle(document.querySelector('#lobby')).display === 'none' && document.activeElement?.id === 'prologue' })()",
+      ),
+    )
+    await sleep(400)
+    check(
+      'replay restarts the film',
+      await evaluate(
+        cdp,
+        "(() => { const video = document.querySelector('#prologue-video'); return video.paused === false && video.currentTime >= 0 && video.currentTime < 1.5 })()",
+      ),
+    )
+    check(
+      'skip returns to the entry',
+      await evaluate(
+        cdp,
+        "(() => { document.querySelector('#prologue-skip').click(); return document.body.dataset.view === 'entry' && document.querySelector('#lobby').inert === false && document.querySelector('#prologue').inert === true && document.activeElement?.id === 'enter' })()",
+      ),
+    )
+    await sleep(700)
+
+    await cdp.send('Page.navigate', { url: `${URL}?view=entry` })
+    await waitFor(
+      async () => (await evaluate(cdp, 'document.readyState')) === 'complete',
+      'entry deep link ready',
+    )
+    await waitFor(
+      async () => (await evaluate(cdp, "document.body.dataset.view")) === 'entry',
+      'entry deep link applies the view',
+    )
+    await sleep(700)
+    check(
+      '?view=entry opens the lobby',
+      await evaluate(
+        cdp,
+        "document.body.dataset.view === 'entry' && document.body.dataset.mode === 'lobby' && document.querySelector('#prologue').hidden === true && getComputedStyle(document.querySelector('#lobby')).display !== 'none'",
+      ),
+    )
+    check(
+      '?view=entry keeps the film paused',
+      await evaluate(cdp, "document.querySelector('#prologue-video').paused === true"),
+    )
+
     await cdp.send('Page.navigate', { url: `${URL}?mode=desktop` })
     await waitFor(
       async () => (await evaluate(cdp, 'document.readyState')) === 'complete',
@@ -334,6 +528,54 @@ async function main() {
         "(() => { const canvas = document.querySelector('#stage'); return canvas.width > 0 && canvas.height > 0 })()",
       ),
     )
+
+    await cdp.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    })
+    await cdp.send('Page.navigate', { url: URL })
+    await waitFor(
+      async () => (await evaluate(cdp, 'document.readyState')) === 'complete',
+      'reduced motion ready',
+    )
+    await waitFor(
+      async () => (await evaluate(cdp, "document.body.dataset.view")) === 'prologue',
+      'reduced motion applies the prologue',
+    )
+    await sleep(500)
+    check(
+      'reduced motion holds the still frame',
+      await evaluate(
+        cdp,
+        "(() => { const video = document.querySelector('#prologue-video'); return document.body.dataset.view === 'prologue' && video.paused === true && getComputedStyle(video).display === 'none' && getComputedStyle(document.querySelector('#prologue-still')).display !== 'none' })()",
+      ),
+    )
+    await cdp.send('Emulation.setEmulatedMedia', { features: [] })
+
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 1,
+      mobile: true,
+    })
+    await cdp.send('Page.navigate', { url: URL })
+    await waitFor(
+      async () => (await evaluate(cdp, 'document.readyState')) === 'complete',
+      'mobile layout ready',
+    )
+    await waitFor(
+      async () => (await evaluate(cdp, "document.body.dataset.view")) === 'prologue',
+      'mobile layout applies the prologue',
+    )
+    await sleep(500)
+    check(
+      'mobile prologue fits the viewport',
+      await evaluate(
+        cdp,
+        "(() => { const stage = document.querySelector('.prologue__stage').getBoundingClientRect(); return document.documentElement.scrollWidth <= window.innerWidth + 1 && document.body.scrollWidth <= window.innerWidth + 1 && stage.width <= window.innerWidth })()",
+      ),
+    )
+    await shot(cdp, 'prologue-390.png')
+    await cdp.send('Emulation.clearDeviceMetricsOverride')
 
     check('no uncaught runtime errors', cdp.errors.length === 0)
     if (cdp.errors.length > 0) {

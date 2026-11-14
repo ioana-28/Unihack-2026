@@ -9,6 +9,7 @@
     "preview": "vite preview --host",
     "tunnel": "cloudflared tunnel --url http://localhost:5173",
     "smoke": "node scripts/smoke.mjs",
+    "poster": "node scripts/poster.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
