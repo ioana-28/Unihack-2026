@@ -30,7 +30,8 @@
       "position": { "x": 8.643, "y": 1.019, "z": -5.133 },
       "facing": "radio",
       "interactables": {
-        "radio": "Pornește radioul"
+        "radio": "Pornește radioul",
+        "window": "Uită-te pe fereastră"
       }
     },
     "hallByLiving": {
@@ -59,7 +60,9 @@
       "tag": "Bucătărie",
       "position": { "x": 8.525, "y": 1.272, "z": -2.737 },
       "facing": "kitchenCounter",
-      "interactables": null
+      "interactables": {
+        "fridge": "Deschide frigiderul"
+      }
     },
     "bathroom": {
       "label": "Bathroom",
@@ -81,7 +84,9 @@
     "sofa": "FUR_LIV_Sofa",
     "entryDoor": "OPEN_D_ENTRY_leaf",
     "kitchenCounter": "FUR_KT_Counter",
-    "bathtub": "FIX_BAIE_Bathtub"
+    "bathtub": "FIX_BAIE_Bathtub",
+    "window": "OPEN_WN_E_LIV_glass",
+    "fridge": "FIX_KT_Fridge"
   },
   "transitions": [
     { "a": "livingCouch", "b": "livingPhone" },

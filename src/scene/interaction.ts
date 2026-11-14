@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { createAdjacency, getState, STATES } from './states'
-import type { StateId } from './states'
+import type { StateId, Vec3 } from './states'
 import type { Reticle } from './reticle'
 
 const DWELL_SECONDS = 1.5
@@ -32,6 +32,12 @@ export type InteractionOptions = {
   reticle: Reticle
   canvas: HTMLCanvasElement
   onDesktopArrive?: (eyeHeight: number) => void
+  /** Day logic: is this object usable right now? Defaults to true. */
+  isObjectActive?: (key: string) => boolean
+  /** Day logic: called once when the dwell on an active object completes. */
+  onActivate?: (key: string) => void
+  /** Day logic: true while a scene runs, so gaze navigation is off. */
+  isNavigationLocked?: () => boolean
 }
 
 export type InteractionController = {
@@ -41,6 +47,13 @@ export type InteractionController = {
   reset: () => void
   dispose: () => void
   currentStateId: () => StateId
+  /** Moves the player to a position (used at the start of each day). */
+  moveTo: (id: StateId) => void
+  /**
+   * Places the player at a point (model coordinates) without changing the
+   * current position, e.g. close to the TV; moveTo() brings them back.
+   */
+  moveToPoint: (point: Vec3) => void
 }
 
 function isVisible(object: THREE.Object3D): boolean {
@@ -56,6 +69,8 @@ export function createInteractionController(
   options: InteractionOptions,
 ): InteractionController {
   const { camera, rig, world, room, isRoomReady, reticle, canvas, onDesktopArrive } = options
+  const isObjectActive = options.isObjectActive ?? (() => true)
+  const isNavigationLocked = options.isNavigationLocked ?? (() => false)
 
   const adjacency = createAdjacency()
   const stateWorldPositions = new Map<StateId, THREE.Vector3>()
@@ -158,10 +173,9 @@ export function createInteractionController(
     clearGaze()
   }
 
-  const teleportTo = (id: StateId): void => {
-    const state = getState(id)
+  const placeAt = (point: Vec3): void => {
     world.updateMatrixWorld(true)
-    destination.set(state.position.x, state.position.y, state.position.z)
+    destination.set(point.x, point.y, point.z)
     world.localToWorld(destination)
 
     if (mode === 'vr') {
@@ -171,7 +185,10 @@ export function createInteractionController(
       camera.position.copy(destination)
       onDesktopArrive?.(destination.y)
     }
+  }
 
+  const teleportTo = (id: StateId): void => {
+    placeAt(getState(id).position)
     current = id
     refresh()
   }
@@ -188,7 +205,7 @@ export function createInteractionController(
     let currentObject: THREE.Object3D | null = object
     while (currentObject && currentObject !== room) {
       const entry = rootForKey.get(currentObject)
-      if (entry) return entry
+      if (entry) return isObjectActive(entry.key) ? entry : null
       currentObject = currentObject.parent
     }
     return null
@@ -239,7 +256,7 @@ export function createInteractionController(
   }
 
   const acquireNavigation = (): GazeTarget | null => {
-    if (navigationIds.length === 0) return null
+    if (navigationIds.length === 0 || isNavigationLocked()) return null
 
     camera.getWorldPosition(eye)
     camera.getWorldDirection(forward)
@@ -312,7 +329,7 @@ export function createInteractionController(
     const progress = Math.min(dwell / DWELL_SECONDS, 1)
     reticle.setProgress(progress)
     if (dwell >= DWELL_SECONDS) {
-      console.log('ok')
+      options.onActivate?.(target.key)
       armed = false
       dwell = 0
       flashUntil = performance.now() + FLASH_MS
@@ -419,5 +436,10 @@ export function createInteractionController(
     reset,
     dispose,
     currentStateId: () => current,
+    moveTo: (id) => teleportTo(id),
+    moveToPoint: (point) => {
+      placeAt(point)
+      clearGaze()
+    },
   }
 }

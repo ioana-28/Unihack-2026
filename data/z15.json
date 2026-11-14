@@ -1,0 +1,143 @@
+{
+  "zi": 15,
+  "data": "Vineri, 15 decembrie 1989",
+  "lumina": "seara",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_noapte.jpg",
+  "optionale": ["televizor"],
+  "ambient": [
+    { "src": "media/audio/ambient/vant.mp3", "la": "fereastra", "volum": 0.06 }
+  ],
+  "start": [
+    { "tip": "titlu", "text": "Vineri, 15 decembrie 1989", "secunde": 3 }
+  ],
+  "pasi": [
+    {
+      "id": "15.1",
+      "obiect": "radio",
+      "indiciu": { "text": "Pornește radioul să afli ce se mai întâmplă.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/radio_europa_z15.mp3",
+          "la": "radio",
+          "filtru": "radio",
+          "subtitrare": "Ascultați Radio Europa Liberă. Ne parvin informații din Timișoara, unde pastorul reformat László Tőkés urmează să fie evacuat forțat. Un grup de enoriași s-a adunat în fața casei pentru a-l sprijini."
+        },
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/radu_replica2.mp3",
+          "subtitrare": "Dacă aude cineva… să audă."
+        }
+      ],
+      "pauza_dupa": 2
+    },
+    {
+      "id": "15.2",
+      "obiect": "telefon",
+      "suna": { "src": "media/audio/sfx/telefon_suna.mp3", "volum": 0.8 },
+      "indiciu": { "text": "Răspunde la telefon.", "dupa": 10, "repeta": 10 },
+      "actiuni": [
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/ioana_z15_a.mp3",
+          "la": "telefon",
+          "filtru": "telefon",
+          "subtitrare": "Radule! Ce faci, invalidule? Ascultă, lumea se strânge la Piața Maria, la popa ăla ungur. Mă duc să văd."
+        },
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/radu_replica3.mp3",
+          "subtitrare": "Ioana… nu la telefon."
+        },
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/ioana_z15_b.mp3",
+          "la": "telefon",
+          "filtru": "telefon",
+          "subtitrare": "Of, iar începi. Te sun mâine. Pa!"
+        }
+      ],
+      "pauza_dupa": 1
+    },
+    {
+      "id": "15.3",
+      "actiuni": [
+        { "tip": "curent", "pornit": false },
+        { "tip": "fereastra", "src": "media/img/img_piata_bezna.jpg" },
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/radu_replica4.mp3",
+          "subtitrare": "Iar s-a luat curentul. Măcar e liniște."
+        }
+      ]
+    },
+    {
+      "id": "15.4",
+      "obiect": "fereastra",
+      "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "privire_fereastra",
+          "cadre": [
+            { "imagine": "media/img/img_piata_bezna.jpg", "video": "media/video/video_piata_bezna.mp4", "secunde": 3 },
+            { "imagine": "media/img/img_piata_noapte.jpg", "video": "media/video/video_piata_noapte.mp4", "secunde": 3 }
+          ],
+          "sunet": { "src": "media/audio/ambient/vant.mp3", "volum": 0.35 },
+          "la_iesire": [
+            { "tip": "curent", "pornit": true },
+            { "tip": "fereastra", "src": "media/img/img_piata_noapte.jpg" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "15.5",
+      "activeaza": ["ziar", "frigider"],
+      "indiciu": {
+        "text": "Pe masă e ziarul de azi.",
+        "dupa": 0,
+        "repeta": 15,
+        "pana_la_flag": "ziar_citit"
+      }
+    }
+  ],
+  "obiecte": {
+    "televizor": {
+      "curent": true,
+      "actiuni": [
+        { "tip": "ecran_tv", "video": "media/video/tv_purici.mp4", "inapoi": "Înapoi" }
+      ]
+    },
+    "ziar": {
+      "actiuni": [
+        { "tip": "flag", "nume": "ziar_citit" },
+        { "tip": "indiciu", "text": "Rupe fila din calendar ca să treacă ziua." }
+      ]
+    },
+    "frigider": {
+      "actiuni": [
+        {
+          "tip": "text",
+          "text": "Câteva picioare de pui, un borcan de zacuscă, salam cu soia. Carnea bună pleca la export.",
+          "secunde": 5
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": { "pasi": ["15.1", "15.2", "15.4"], "flaguri": ["ziar_citit"] },
+    "refuz": { "text": "Continuă să explorezi.", "secunde": 3 },
+    "actiuni": [
+      { "tip": "sunet", "src": "media/audio/sfx/hartie_rupta.mp3", "la": "calendar" },
+      { "tip": "fade", "spre": 1, "secunde": 1 },
+      {
+        "tip": "voce",
+        "src": "media/audio/voce/radu_replica5.mp3",
+        "subtitrare": null,
+        "_nota": "Transcrierea replicii 5 lipsește din documente; completați subtitrarea aici."
+      },
+      { "tip": "zi_urmatoare", "lipsa_text": "Sfârșitul zilei 15 — continuare în curând", "secunde": 4 }
+    ]
+  }
+}
