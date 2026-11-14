@@ -2,6 +2,10 @@ import * as THREE from 'three'
 import { OrientationControls } from './cardboard/orientation'
 import { StereoEffect } from './cardboard/stereo'
 import { DebugControls } from './debug/debug'
+import { GameAudio } from './game/audio'
+import { Overlay } from './game/overlay'
+import { RoomFx } from './game/room-fx'
+import { DayRunner } from './game/runner'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { createHintPanel } from './scene/hint'
@@ -51,6 +55,10 @@ export class App {
   private readonly orientation: OrientationControls
   private readonly debug: DebugControls
   private readonly interaction: InteractionController
+  private readonly audio: GameAudio
+  private readonly overlay: Overlay
+  private readonly fx: RoomFx
+  private readonly runner: DayRunner
   private readonly timer = new THREE.Timer()
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   private readonly onModeChange: (mode: Mode) => void
@@ -123,6 +131,24 @@ export class App {
       reticle: this.reticle,
       canvas,
       onDesktopArrive: (eyeHeight) => this.controls.setEyeHeight(eyeHeight),
+      isObjectActive: (key) => this.runner.isActive(key),
+      onActivate: (key) => this.runner.onActivate(key),
+      isNavigationLocked: () => this.runner.isNavigationLocked(),
+    })
+    this.audio = new GameAudio(this.camera)
+    this.overlay = new Overlay(this.scene, this.camera)
+    this.fx = new RoomFx(this.room.root)
+    this.runner = new DayRunner({
+      audio: this.audio,
+      overlay: this.overlay,
+      fx: this.fx,
+      camera: this.camera,
+      room: this.room.root,
+      isRoomReady: () => this.room.isReady(),
+      currentPosition: () => this.interaction.currentStateId(),
+      moveTo: (id) => this.interaction.moveTo(id),
+      moveToPoint: (point) => this.interaction.moveToPoint(point),
+      onFinished: () => this.returnToStart(),
     })
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
 
@@ -139,6 +165,7 @@ export class App {
   enterDesktop(): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
+    this.audio.resume()
     void this.requestFullscreen()
     this.controls.yaw = this.camera.rotation.y
     this.controls.pitch = this.camera.rotation.x
@@ -149,10 +176,23 @@ export class App {
     this.interaction.setMode('desktop')
     this.interaction.setEnabled(true)
     this.setMode('desktop')
+    void this.runner.start(15)
+  }
+
+  /** Leaves the game (desktop or VR) and shows the start screen. */
+  returnToStart(): void {
+    if (this.mode === 'desktop') {
+      this.exitToLobby()
+      return
+    }
+    const session = this.renderer.xr.getSession()
+    if (session) void session.end().catch(() => this.handleSessionEnd())
+    else this.runner.stop()
   }
 
   exitToLobby(): void {
     if (this.mode !== 'desktop') return
+    this.runner.stop()
     this.interaction.setEnabled(false)
     this.reticle.group.visible = false
     this.controls.setEnabled(false)
@@ -215,6 +255,7 @@ export class App {
   async enterVR(): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
+    this.audio.resume()
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
     try {
@@ -303,6 +344,7 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
+    this.runner.stop()
     this.interaction.setEnabled(false)
     this.interaction.reset()
     this.prologue.stop()
@@ -328,6 +370,8 @@ export class App {
     this.orientation.dispose()
     this.controls.dispose()
     this.debug.dispose()
+    this.runner.stop()
+    this.overlay.dispose()
     this.interaction.dispose()
     this.reticle.dispose()
     this.room.dispose()
@@ -369,6 +413,7 @@ export class App {
     this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
     this.interaction.setEnabled(true)
     this.showHint()
+    void this.runner.start(15)
   }
 
   private setHudDistance(distance: number): void {
@@ -456,6 +501,12 @@ export class App {
     }
   }
 
+  private updateGame(delta: number, time: number): void {
+    this.runner.update(time)
+    this.fx.update(delta)
+    this.overlay.update(delta)
+  }
+
   private readonly frame = (): void => {
     this.timer.update()
     const delta = Math.min(this.timer.getDelta(), 0.05)
@@ -503,6 +554,7 @@ export class App {
     if (this.mode === 'desktop') {
       this.controls.update(delta)
       this.interaction.update(delta)
+      this.updateGame(delta, time)
       this.renderer.render(this.scene, this.camera)
       return
     }
@@ -510,6 +562,7 @@ export class App {
     if (this.mode === 'vr') {
       this.prologue.update(delta)
       this.interaction.update(delta)
+      this.updateGame(delta, time)
       this.renderer.render(this.scene, this.camera)
       return
     }
