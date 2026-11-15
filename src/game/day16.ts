@@ -1,6 +1,6 @@
 import * as THREE from 'three'
+import { mediaSrc } from '../preload'
 import { getState, STATES } from '../scene/states'
-import { assetUrl } from './days'
 import type { GameAudio, PlayOptions, Playback } from './audio'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -443,7 +443,7 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
       { once: true },
     )
     if (src) {
-      video.src = assetUrl(src)
+      video.src = mediaSrc(src)
       video.load()
     }
 

@@ -14,6 +14,9 @@ const FIXED_ASSETS = [
   PROLOGUE_POSTER_URL,
   '/media/newspaper_page1.jpeg',
   '/media/newspaper_page2.jpeg',
+  // Referenced directly by the day 16 extension, not by the day files.
+  'media/audio/ambient/multime_z20.mp3',
+  'media/audio/ambient/scandari_z16.mp3',
 ]
 const CONCURRENCY = 4
 const MAX_ATTEMPTS = 2
