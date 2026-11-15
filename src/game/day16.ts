@@ -30,6 +30,8 @@ export type Day16Deps = {
   fx: RoomFx
   camera: THREE.Camera
   room: THREE.Object3D
+  /** True while an immersive XR session is presenting. */
+  isXR?: () => boolean
 }
 
 export type Day16Extension = {
@@ -113,7 +115,7 @@ function toVoiceLines(value: unknown): VoiceLine[] {
 }
 
 export function createDay16Extension(deps: Day16Deps): Day16Extension {
-  const { audio, overlay, fx, camera, room } = deps
+  const { audio, overlay, fx, camera, room, isXR } = deps
 
   let generation = 0
   let peephole: Peephole | null = null
@@ -353,6 +355,21 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     Object.assign(video, { muted: true, loop: true, playsInline: true, preload: 'auto' })
     video.setAttribute('playsinline', '')
 
+    const backdropGeometry = new THREE.PlaneGeometry(1, 1)
+    const backdropMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      fog: false,
+    })
+    const backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial)
+    backdrop.name = 'ziua16_vizor_backdrop'
+    backdrop.position.set(0, 0, -PEEPHOLE_DISTANCE - 0.01)
+    backdrop.renderOrder = 44
+    camera.add(backdrop)
+
     const material = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
@@ -372,19 +389,28 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
       const perspective = camera instanceof THREE.PerspectiveCamera ? camera : null
       const fov = perspective?.fov ?? 62
       const aspect = perspective?.aspect ?? 16 / 9
+      const inXR = isXR?.() ?? false
       const viewHeight = 2 * PEEPHOLE_DISTANCE * Math.tan(THREE.MathUtils.degToRad(fov * 0.5))
-      const viewWidth = viewHeight * aspect
+      const viewWidth = viewHeight * (inXR ? aspect * 0.5 : aspect)
       const videoAspect =
         video.videoWidth > 0 && video.videoHeight > 0
           ? video.videoWidth / video.videoHeight
           : 16 / 9
       let width = viewWidth
       let height = width / videoAspect
-      if (height > viewHeight) {
+      if (inXR) {
+        // Same cover fit as the prologue screen: fill each eye, no letterbox.
+        if (height < viewHeight) {
+          height = viewHeight
+          width = height * videoAspect
+        }
+      } else if (height > viewHeight) {
         height = viewHeight
         width = height * videoAspect
       }
       screen.scale.set(width, height, 1)
+      const overscan = inXR ? 1.3 : 1.02
+      backdrop.scale.set(viewWidth * overscan, viewHeight * overscan, 1)
     }
     layout()
 
@@ -425,12 +451,15 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
       if (closed) return
       closed = true
       screen.parent?.remove(screen)
+      backdrop.parent?.remove(backdrop)
       video.pause()
       video.removeAttribute('src')
       video.load()
       videoTexture?.dispose()
       geometry.dispose()
       material.dispose()
+      backdropGeometry.dispose()
+      backdropMaterial.dispose()
       room.visible = wasVisible
     }
 

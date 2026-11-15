@@ -150,6 +150,7 @@ export class App {
       moveTo: (id) => this.interaction.moveTo(id),
       moveToPoint: (point) => this.interaction.moveToPoint(point),
       onFinished: () => this.returnToStart(),
+      isXR: () => this.renderer.xr.isPresenting,
     })
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
 

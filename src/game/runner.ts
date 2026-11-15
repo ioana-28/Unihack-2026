@@ -57,6 +57,8 @@ export type RunnerDeps = {
   moveToPoint: (point: Vec3) => void
   /** The game is over for now: go back to the start screen. */
   onFinished: () => void
+  /** True while an immersive XR session is presenting. */
+  isXR?: () => boolean
 }
 
 const now = (): number => performance.now() / 1000
@@ -84,6 +86,7 @@ export class DayRunner {
       fx: deps.fx,
       camera: deps.camera,
       room: deps.room,
+      isXR: deps.isXR,
     })
   }
 
