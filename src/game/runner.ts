@@ -6,6 +6,8 @@ import { createDay16Extension } from './day16'
 import type { Day16Extension } from './day16'
 import { createDay18Extension } from './day18'
 import type { Day18Extension } from './day18'
+import { createDay19Extension } from './day19'
+import type { Day19Extension } from './day19'
 import { loadDay } from './days'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -117,6 +119,7 @@ export class DayRunner {
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
   private readonly extra: Day16Extension
   private readonly day18: Day18Extension
+  private readonly day19: Day19Extension
   private control: ExtensionControl | null = null
   private frameCallbacks = new Set<(time: number, delta: number) => void>()
   private cleanups: (() => void)[] = []
@@ -138,6 +141,12 @@ export class DayRunner {
       fx: deps.fx,
       camera: deps.camera,
       room: deps.room,
+    })
+    this.day19 = createDay19Extension({
+      audio: deps.audio,
+      overlay: deps.overlay,
+      room: deps.room,
+      fx: deps.fx,
     })
   }
 
@@ -223,6 +232,7 @@ export class DayRunner {
     this.deps.audio.stopAll()
     this.extra.reset()
     this.day18.reset()
+    this.day19.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
     this.control = null
@@ -411,6 +421,7 @@ export class DayRunner {
         if (handler) return handler(action, this.context(gen))
         if (this.extra.handles(a)) return this.check(this.extra.run(a), gen)
         if (this.day18.handles(a)) return this.check(this.day18.run(a), gen)
+        if (this.day19.handles(a)) return this.check(this.day19.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
       }

@@ -43,6 +43,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
   const enterHint = requireElement<HTMLElement>('#enter-hint')
   const desktop = requireElement<HTMLButtonElement>('#desktop')
   const day16 = requireElement<HTMLButtonElement>('#day16')
+  const day19 = requireElement<HTMLButtonElement>('#day19')
   const howtoToggle = requireElement<HTMLButtonElement>('#howto-toggle')
   const howto = requireElement<HTMLElement>('#howto')
   const exit = requireElement<HTMLButtonElement>('#exit')
@@ -82,6 +83,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
 
   desktop.addEventListener('click', handlers.onDesktop)
   day16.addEventListener('click', () => handlers.onJumpDay(16))
+  day19.addEventListener('click', () => handlers.onJumpDay(19))
   exit.addEventListener('click', handlers.onExit)
 
   toastActionButton.addEventListener('click', () => {
