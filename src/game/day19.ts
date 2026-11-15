@@ -3,6 +3,7 @@ import { getState, STATES } from '../scene/states'
 import type { GameAudio, PlayOptions, Playback } from './audio'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
+import { gameState } from './state'
 
 // Day 19 extension: passive TV static (the TV is on all day but inactive) and
 // the Serbian radio bed with static/dropouts. It plugs into DayRunner through
@@ -293,6 +294,9 @@ export function createDay19Extension(deps: Day19Deps): Day19Extension {
   }
 
   const runRadio = async (action: Day19Action, gen: number): Promise<void> => {
+    // The Serbian broadcast is a one-off recording: after the first play the
+    // flag is set and later gazes at the radio stay silent.
+    if (gameState.flaguri.has('radio_folosit')) return
     const src = asString(action.src)
     if (!src) return
     const radio = nodeFor('radio')

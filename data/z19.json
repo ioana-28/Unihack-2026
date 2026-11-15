@@ -48,12 +48,12 @@
   "obiecte": {
     "radio": {
       "actiuni": [
-        { "tip": "flag", "nume": "radio_folosit" },
         {
           "tip": "ziua19_radio",
           "src": "media/audio/voce/radio_sarb_z19.mp3",
           "subtitrare": "Din Timișoara sosesc vești că muncitorii din mai multe fabrici au oprit lucrul. Printre ei, și cei de la Elba."
-        }
+        },
+        { "tip": "flag", "nume": "radio_folosit" }
       ]
     }
   },
