@@ -63,6 +63,43 @@ export type RunnerDeps = {
 
 const now = (): number => performance.now() / 1000
 
+// ---------- Extension point: action types added by separate modules (e.g. day 17).
+
+/** Temporary override of the lock rules while an extension action runs. */
+export type ExtensionControl = {
+  isActive: (key: string) => boolean
+  navigationLocked: () => boolean
+}
+
+export type ActionContext = {
+  deps: RunnerDeps
+  /** Cancellable wait; throws if the day is stopped meanwhile. */
+  wait: (seconds: number) => Promise<void>
+  /** Awaits a promise, then throws if the day was stopped meanwhile. */
+  check: <T>(promise: Promise<T>) => Promise<T>
+  /** Runs nested actions from the day file (built-in or registered). */
+  run: (actions: unknown[]) => Promise<void>
+  /** Model node of a day-file object (radio, telefon, …), if any. */
+  node: (id: string) => THREE.Object3D | null
+  /** Overrides who is active / whether navigation is locked; null restores the normal rules. */
+  setControl: (control: ExtensionControl | null) => void
+  /** Called every frame (time in seconds) until the day stops. */
+  onFrame: (callback: (time: number, delta: number) => void) => () => void
+  /** Called when the day stops (leaving the game, next day). */
+  onCleanup: (callback: () => void) => void
+  /** True while a scene, a ringing object or an override locks the room. */
+  isLocked: () => boolean
+}
+
+export type ActionHandler = (action: Record<string, unknown>, ctx: ActionContext) => Promise<void> | void
+
+const extensionActions = new Map<string, ActionHandler>()
+
+/** Registers a new action type for the day files; built-in types cannot be replaced. */
+export function registerAction(tip: string, handler: ActionHandler): void {
+  extensionActions.set(tip, handler)
+}
+
 export class DayRunner {
   private readonly deps: RunnerDeps
   private day: ZiData | null = null
@@ -77,6 +114,10 @@ export class DayRunner {
   private ambient: { spec: Ambient; playback: Playback | null }[] = []
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
   private readonly extra: Day16Extension
+  private control: ExtensionControl | null = null
+  private frameCallbacks = new Set<(time: number, delta: number) => void>()
+  private cleanups: (() => void)[] = []
+  private lastTime = 0
 
   constructor(deps: RunnerDeps) {
     this.deps = deps
@@ -96,6 +137,7 @@ export class DayRunner {
   isActive(key: string): boolean {
     const id = OBIECT_FOR_KEY.get(key)
     if (!id || !this.day || !this.running) return false
+    if (this.control) return this.control.isActive(key)
     if (this.scene) return false
     if (this.ringing) return id === this.ringing
     if (id === this.waitingFor) return true
@@ -109,6 +151,7 @@ export class DayRunner {
 
   isNavigationLocked(): boolean {
     if (!this.running) return false
+    if (this.control) return this.control.navigationLocked()
     if (this.scene) return true
     // While something rings, stay put, unless it can't be reached from here.
     if (this.ringing) return this.reachable(this.ringing)
@@ -171,11 +214,17 @@ export class DayRunner {
     this.extra.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
+    this.control = null
+    this.frameCallbacks.clear()
+    for (const cleanup of this.cleanups.splice(0)) cleanup()
     this.deps.fx.reset()
   }
 
   update(time: number): void {
     if (!this.running) return
+    const delta = Math.min(0.1, Math.max(0, time - this.lastTime))
+    this.lastTime = time
+    for (const callback of [...this.frameCallbacks]) callback(time, delta)
     const pulse = 0.12 + 0.22 * (0.5 + 0.5 * Math.sin(time * 2.6))
     for (const [id, node] of this.nodes) {
       this.deps.fx.setGlow(node, this.glows(id) ? pulse : 0)
@@ -343,10 +392,14 @@ export class DayRunner {
         return this.nextDay(a.lipsa_text, a.secunde, gen)
       case 'ecran_tv':
         return this.tvView(a, gen)
-      default:
+      default: {
+        const action = a as unknown as Record<string, unknown>
+        const handler = extensionActions.get(String(action.tip))
+        if (handler) return handler(action, this.context(gen))
         if (this.extra.handles(a)) return this.check(this.extra.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
+      }
     }
   }
 
@@ -434,6 +487,28 @@ export class DayRunner {
     await this.wait(seconds, gen)
     // The app leaves the game and calls stop(); the screen stays black until then.
     this.deps.onFinished()
+  }
+
+  private context(gen: number): ActionContext {
+    return {
+      deps: this.deps,
+      wait: (seconds) => this.wait(seconds, gen),
+      check: (promise) => this.check(promise, gen),
+      run: (actions) => this.runActions(actions as Actiune[], gen),
+      node: (id) => this.nodes.get(id as ObiectId) ?? null,
+      setControl: (control) => {
+        if (gen === this.generation) this.control = control
+      },
+      onFrame: (callback) => {
+        if (gen === this.generation) this.frameCallbacks.add(callback)
+        return () => this.frameCallbacks.delete(callback)
+      },
+      onCleanup: (callback) => {
+        if (gen === this.generation) this.cleanups.push(callback)
+        else callback()
+      },
+      isLocked: () => this.scene || this.ringing !== null || this.control !== null,
+    }
   }
 
   // ---------- Hints

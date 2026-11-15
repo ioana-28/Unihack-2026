@@ -1,0 +1,94 @@
+{
+  "zi": 20,
+  "data": "Miercuri, 20 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_plina_20.jpg",
+  "optionale": ["frigider"],
+  "ambient": [
+    { "src": "media/audio/ambient/vant.mp3", "la": "fereastra", "volum": 0.06 }
+  ],
+  "start": [
+    { "tip": "titlu", "text": "Miercuri, 20 decembrie 1989", "secunde": 3 },
+    { "tip": "televizor_17" },
+    {
+      "tip": "multime_crescatoare",
+      "src": "media/audio/ambient/multime_z20.mp3",
+      "la": "fereastra",
+      "volum_start": 0.15,
+      "volum_final": 1.6,
+      "secunde": 60
+    }
+  ],
+  "pasi": [
+    {
+      "id": "20.0",
+      "actiuni": [{ "tip": "asteapta", "secunde": 3 }]
+    },
+    {
+      "id": "20.1",
+      "obiect": "telefon",
+      "suna": { "src": "media/audio/sfx/telefon_suna.mp3", "volum": 0.8 },
+      "indiciu": { "text": "Răspunde la telefon.", "dupa": 10, "repeta": 10 },
+      "actiuni": [
+        {
+          "tip": "voce_cu_fundal",
+          "src": "media/audio/voce/ioana_z20.mp3",
+          "la": "telefon",
+          "filtru": "telefon",
+          "subtitrare": "Radule, uită-te pe geam! Toată Timișoara e în piață! Zic de la balcon că suntem oraș liber!",
+          "fundal": { "src": "media/audio/ambient/multime_z20.mp3", "volum": 0.7 }
+        }
+      ]
+    },
+    {
+      "id": "20.2",
+      "obiect": "fereastra",
+      "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "privire_poza",
+          "cadre": [
+            {
+              "imagine": "media/img/img_piata_plina_20.jpg",
+              "video": "media/video/video_piata_plinasidacia_20.mp4",
+              "secunde": 20
+            }
+          ],
+          "sunet": "media/audio/ambient/scandari_z16.mp3",
+          "volum": 1.8,
+          "poza": {
+            "la_secunda": 15,
+            "sunet": "media/audio/sfx/declansator.mp3",
+            "text": "Clic. Radu a fotografiat piața plină.",
+            "secunde": 3
+          }
+        },
+        { "tip": "fereastra", "src": "media/img/img_piata_plina_20.jpg" },
+        { "tip": "indiciu", "text": "Rupe fila din calendar ca să treacă ziua." }
+      ]
+    }
+  ],
+  "obiecte": {
+    "frigider": {
+      "actiuni": [
+        {
+          "tip": "text",
+          "text": "Câteva picioare de pui, un borcan de zacuscă, salam cu soia. Carnea bună pleca la export.",
+          "secunde": 5
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": { "pasi": ["20.1", "20.2"], "flaguri": [] },
+    "refuz": { "text": "Continuă să explorezi.", "secunde": 3 },
+    "actiuni": [
+      { "tip": "sunet", "src": "media/audio/sfx/hartie_rupta.mp3", "la": "calendar" },
+      { "tip": "multime_stinge", "secunde": 2 },
+      { "tip": "fade", "spre": 1, "secunde": 1 },
+      { "tip": "text", "text": "La televizor ne zic huligani. Huliganii eram noi. Jumătate de oraș.", "secunde": 5 },
+      { "tip": "zi_urmatoare", "lipsa_text": "Sfârșitul zilei 20 — continuare în curând", "secunde": 4 }
+    ]
+  }
+}

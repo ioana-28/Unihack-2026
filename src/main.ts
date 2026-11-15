@@ -1,10 +1,14 @@
 import './lobby/lobby.css'
 import { App } from './app'
+import { installLogPanel, installLogRelay } from './debug/logs'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
 
 const params = new URLSearchParams(window.location.search)
+if (import.meta.env.DEV || params.has('logs')) installLogRelay()
+if (params.has('logs')) installLogPanel()
+
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')
 if (!canvas) throw new Error('Element not found: #stage')
 
@@ -148,10 +152,7 @@ function startWatching(): void {
 startWatching()
 
 const requestedMode = params.get('mode')
-const requestedDay = Number(params.get('day'))
-const startDay =
-  Number.isInteger(requestedDay) && requestedDay >= 15 && requestedDay <= 22 ? requestedDay : 15
-if (requestedMode === 'desktop') app.enterDesktop(startDay)
+if (requestedMode === 'desktop') app.enterDesktop()
 const debugParam = params.get('debug')
 if (debugParam === '' || debugParam === '1') app.setDebug(true)
 if (params.has('stereo')) app.setMono(false)

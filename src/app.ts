@@ -6,6 +6,9 @@ import { GameAudio } from './game/audio'
 import { Overlay } from './game/overlay'
 import { RoomFx } from './game/room-fx'
 import { DayRunner } from './game/runner'
+import { resetGame } from './game/state'
+import './game/z17'
+import './game/z20'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { getMediaProgress, isMediaReady, startMediaPreload } from './preload'
@@ -31,6 +34,15 @@ const CARDBOARD_HUD_DISTANCE = 10
 const WEBXR_HUD_DISTANCE = 50
 const RETICLE_REFERENCE = 1.1
 const HINT_REFERENCE = 1.2
+
+/** Demo jump: `?zi=17` (or `?day=17`) starts that day with default variables. */
+function startDay(): number {
+  const params = new URLSearchParams(window.location.search)
+  const zi = Number(params.get('zi') ?? params.get('day'))
+  if (!Number.isInteger(zi) || zi < 15 || zi > 22) return 15
+  resetGame()
+  return zi
+}
 
 function requestOrientationPermission(): Promise<void> {
   const constructor = window.DeviceOrientationEvent as unknown as {
@@ -182,7 +194,7 @@ export class App {
     this.renderer.setAnimationLoop(this.frame)
   }
 
-  enterDesktop(day = 15): void {
+  enterDesktop(day = startDay()): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
     this.audio.resume()
@@ -304,7 +316,7 @@ export class App {
     this.debug.activate()
   }
 
-  async enterVR(day = 15): Promise<void> {
+  async enterVR(day = startDay()): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
     this.audio.resume()
