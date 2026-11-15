@@ -1,0 +1,119 @@
+body.debug-mode .lobby,
+body.debug-mode .grain,
+body.debug-mode .exit,
+body.debug-mode .toast {
+  display: none !important;
+}
+
+.debug-hud {
+  position: fixed;
+  top: max(0.8rem, env(safe-area-inset-top));
+  left: max(0.8rem, env(safe-area-inset-left));
+  z-index: 20;
+  width: min(27rem, calc(100vw - 1.6rem));
+  padding: 0.7rem 0.8rem;
+  color: #efe5cf;
+  background: rgba(8, 7, 6, 0.86);
+  border: 1px solid rgba(224, 160, 68, 0.45);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.debug-hud[hidden],
+.debug-crosshair[hidden] {
+  display: none;
+}
+
+.debug-hud__bar {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(239, 229, 207, 0.14);
+}
+
+.debug-hud__title {
+  color: #f4c583;
+  letter-spacing: 0.22em;
+}
+
+.debug-hud__key {
+  color: #8a7f6a;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+.debug-hud__row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.debug-hud__row span {
+  color: #8a7f6a;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.debug-hud__row b {
+  overflow: hidden;
+  font-weight: 500;
+  color: #efe5cf;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-hud__help {
+  margin: 0.5rem 0 0;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(239, 229, 207, 0.14);
+  color: #c2b49b;
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
+.debug-hud__waypoints {
+  max-height: 11rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  overflow: hidden;
+  border-top: 1px solid rgba(239, 229, 207, 0.14);
+  color: #c2b49b;
+  font-size: 0.62rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.debug-hud__flash {
+  margin: 0.45rem 0 0;
+  color: #f4c583;
+  font-size: 0.64rem;
+}
+
+.debug-crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 19;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  pointer-events: none;
+  border: 1px solid rgba(244, 197, 131, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(8, 7, 6, 0.6);
+}
+
+.debug-crosshair::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #f4c583;
+}
