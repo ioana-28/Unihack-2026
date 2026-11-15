@@ -1,134 +1,277 @@
 # Apartamentul
 
-A seated VR experience set in a Timișoara apartment during the week of 15 to 22 December 1989.
+A seated WebXR experience set in a Timișoara apartment during the week of 15–22 December 1989.
 
-The whole experience runs inside VR. The lobby is the launcher: a short 2D screen that collects the tap browsers require before they grant a VR session. After that, everything is rendered in the headset.
+The whole experience runs in VR, with a short 2D lobby that collects the tap browsers require before starting a session. A prologue film plays head-locked, then fades into the living room. Days 15–21 are playable from `data/z15.json`–`data/z21.json`; day 17 includes a live conversation with the neighbour, Doamna Ana, through the peephole.
 
-The app enters WebXR only. There is no Cardboard fallback in the lobby. WebXR needs an HTTPS origin and a browser or headset that exposes `immersive-vr`; the lobby status line reports why the session is unavailable when it is. The old Cardboard modules remain in the repo but are no longer reachable from the UI.
+The apartment is the `romconfort` GLB with KTX2/ETC1S textures, cached in Cache Storage after the first load. Ana's conversation uses an ElevenLabs Conversational AI agent over WebRTC, with pre-recorded video loops for her face and a recorded fallback line when the live session is unavailable.
 
-The prologue introduces Radu Petrescu, a 34 year old design engineer at ELBA, confined with a leg cast after slipping on ice in a pre-dawn food queue. It is a ten second film in five shots. When the VR session starts, the film plays head-locked on a full-view screen, then fades directly into the living room without leaving VR. A narrated voiceover and subtitles will be added to the film later.
+## Requirements
 
-The apartment is the exported `romconfort_assets.glb` model. The 93 MB source lives in `assets/models/romconfort-source.glb`; `npm run model:ktx2` converts its 2K textures to KTX2/ETC1S and writes `public/models/romconfort.glb`. The app loads that file through Three's `KTX2Loader`, so the textures stay GPU-compressed and no longer exhaust phone memory when the room appears. The living room is the starting room: the viewer is seated on the couch facing the TV. The download is cached in Cache Storage after the first successful load, and the lobby shows its progress. Until it is ready, a simple room shell is shown, and the prologue holds its last frame until the model can take over.
+| Thing | Version / notes |
+| --- | --- |
+| Node.js | 22 LTS (Vite 8 needs 20.19+ or 22.12+) |
+| npm | 10+ (ships with Node 22) |
+| Git | any recent version |
+| Browser | Chrome, Edge, or a WebXR-capable headset browser |
+| Microphone | needed only for the day-17 Ana conversation |
 
-The film is a reconstruction, not archival footage. Radu is a fictional character. The setting and the objects in the room come from the documented context of the week.
+Optional tools, only if you regenerate assets or test on a phone:
 
-## Run it
+| Tool | Used by |
+| --- | --- |
+| [KTX-Software](https://github.com/KhronosGroup/KTX-Software/releases) 4.4+ | `npm run model:ktx2` |
+| Chrome or Edge | `npm run poster` |
+| [Android Platform Tools](https://developer.android.com/tools/releases/platform-tools) (`adb`) | `npm run reverse:dev`, `npm run reverse:preview` |
+| [Tailscale](https://tailscale.com/download) | `npm run tailscale:*` |
+| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) | `npm run tunnel` |
 
-Install the dependencies, then start the dev server.
+## Quick start
 
 ```powershell
+git clone https://github.com/ioana-28/Unihack-2026.git
+cd Unihack-2026
 npm install
 npm run dev
 ```
 
-Open the URL that Vite prints. The lobby opens first. Add `?mode=desktop` to start in the room with mouse and keyboard.
+Open `http://localhost:5173`. The lobby appears first.
 
-Build the production bundle with `npm run build`.
+- Use `http://localhost:5173/?mode=desktop` to skip the lobby and start in the room with mouse and keyboard.
+- The primary lobby button starts the game: WebXR when the device supports it, desktop otherwise.
+- `npm run typecheck` checks TypeScript. `npm run build` creates the production bundle in `dist/`. `npm run preview` serves it on `http://localhost:4173`.
 
-Rebuild the KTX2 model with `npm run model:ktx2` (pass a quality value with `npm run model:ktx2 -- 192`). It needs KTX-Software 4.4+ with `ktx` on `PATH`, and it reads `assets/models/romconfort-source.glb`. The intermediate PNG file is written to `.artifacts/` and removed when the conversion succeeds.
+The KTX2 model (`public/models/romconfort.glb`, about 100 MB) and the media files are committed, so a fresh clone does not need any asset generation.
 
-Regenerate the poster and the five cut frames with `npm run poster`. The script reads `public/media/prologue.mp4` and writes `public/media/prologue-poster.jpg` plus `.artifacts/cuts/`. To capture other times, set `POSTER_CUTS` first.
+## ElevenLabs agent
 
-```powershell
-$env:POSTER_CUTS='0,2,4,6,8.3'
-npm run poster
+Ana is implemented in `src/game/z17/ana.ts` and configured in `src/game/z17/ana-config.ts`.
+
+The default agent ID is public and is read from:
+
+```ts
+import.meta.env.VITE_ELEVENLABS_AGENT_ID ?? 'agent_9401m7bme2wce8ft25gn340azf0a'
 ```
 
-## Open it on the phone in VR
+To use your own agent, create `.env.local` in the repo root:
 
-WebXR is required. It needs a trusted HTTPS origin and a browser or headset that reports `immersive-vr`.
+```ini
+VITE_ELEVENLABS_AGENT_ID=agent_your_id_here
+```
 
-1. Start the dev server with `npm run dev`.
-2. Run `npm run tailscale:serve` in a second terminal, then `npm run tailscale:url` to print the stable HTTPS address.
-3. Open that address in Chrome on the phone or in the headset browser. Both devices must be signed into the same Tailscale tailnet.
-4. Press **Intră în VR**.
-5. Allow the session if the browser asks.
-6. Put the phone in the headset. The film plays on a full-view screen, then fades into the living room.
+Restart `npm run dev` after changing it. Never put an ElevenLabs API key in this repo: the browser fetches a short-lived conversation token for a public agent, and no secret is needed.
 
-Tailscale Serve keeps the same origin between sessions, so the KTX2 model stays in Cache Storage and later loads do not download it again. A quick `trycloudflare.com` tunnel gets a new hostname on every run, which throws that cache away.
+The agent must have:
 
-For a cable connection, run `npm run build`, `npm run preview`, then `npm run reverse:preview` and open `http://localhost:4173` on the phone. Localhost is a secure context, so WebXR works and the model travels over USB.
+- public/shareable access, so the token endpoint accepts the request;
+- prompt, first-message, and language **overrides enabled** in the ElevenLabs dashboard;
+- the voice and TTS model chosen in the dashboard. The code only overrides the prompt, the opening line, and `language: 'ro'`.
 
-WebXR hands the session and lens calibration to the browser or headset. The lobby status line says `WebXR disponibil` when the session is available, or one of `WebXR cere HTTPS`, `WebXR lipsește din browser`, `WebXR fără immersive-vr` when it is not. Android Chrome with only a Cardboard viewer usually does not expose `immersive-vr`; use a WebXR-capable headset or browser for this build.
+Ana needs a microphone and a **secure context**. `localhost` and HTTPS work; a plain `http://192.168.x.x:5173` LAN URL does not, and the scene falls back to the recorded line. Add `?logs` to see the `[ana]` log panel, or read the `[phone]` lines that the dev server prints in its terminal.
 
-The renderer is **monoscopic by default**: the same camera image is submitted to both eye viewports, so both eyes see the TV, reticle, and HUD at the same screen position. This avoids double points on viewers whose IPD or lens alignment is off. Add `?stereo` to the URL for true stereo, where the right eye sees slightly more of the right side because it is physically offset from the left eye.
+## Phone / headset setup
 
-`npm run tunnel` is the old cloudflared path and is optional if you already serve the app over HTTPS. Prefer Tailscale Serve or the USB reverse path for phone testing.
+WebXR and the microphone both require a secure origin. There are three ways to get one on a phone or headset. Prefer USB while developing, and Tailscale Serve for a stable address.
+
+### Option 1: USB with `adb reverse` (fastest for development)
+
+`adb reverse` forwards the phone's `localhost` port over the USB cable to the PC, so the phone sees a real secure `localhost` origin without certificates.
+
+1. Install Android Platform Tools and add the folder containing `adb` to `PATH`.
+2. On the phone, enable **Developer options → USB debugging**, connect the USB cable, and accept the RSA fingerprint prompt.
+3. Verify the device:
+
+   ```powershell
+   adb devices
+   ```
+
+   It should list your device as `device`, not `unauthorized`.
+
+4. Terminal 1, start the dev server:
+
+   ```powershell
+   npm run dev
+   ```
+
+5. Terminal 2, create the reverse tunnel:
+
+   ```powershell
+   npm run reverse:dev
+   ```
+
+6. On the phone, open `http://localhost:5173`. Add `?mode=desktop` for a non-VR test.
+
+For a production build over USB, use ports 4173 instead:
+
+```powershell
+npm run build
+npm run preview
+npm run reverse:preview
+```
+
+Then open `http://localhost:4173` on the phone.
+
+Notes:
+
+- `adb reverse --list` shows the active tunnel. Re-run the script after unplugging the phone.
+- Both `reverse:*` scripts target fixed ports. Keep Vite on 5173 (dev) or 4173 (preview), or adjust the script.
+- Use a data cable; charge-only cables do not expose USB debugging.
+
+### Option 2: Tailscale Serve (stable HTTPS address)
+
+Best when the PC and the phone/headset are on Wi-Fi and you want the same origin across sessions, so the 100 MB model stays in Cache Storage.
+
+1. Install Tailscale on the PC and on the phone/headset and sign both into the same tailnet.
+2. Terminal 1, start the dev server:
+
+   ```powershell
+   npm run dev
+   ```
+
+3. Terminal 2, first time only:
+
+   ```powershell
+   npm run tailscale:login
+   ```
+
+4. Serve the dev port and print the URL:
+
+   ```powershell
+   npm run tailscale:serve
+   npm run tailscale:url
+   ```
+
+5. Open the printed `https://<machine>.<tailnet>.ts.net/` address on the phone or headset.
+
+`npm run tailscale:serve` runs `tailscale serve --bg 5173`, so the dev server must be listening on 5173. `npm run tailscale:status` shows the current Serve config.
+
+### Option 3: Cloudflare quick tunnel
+
+Useful when Tailscale is not available, but the `trycloudflare.com` hostname changes on every run, so the model cache is thrown away each time.
+
+1. Install `cloudflared` and put it on `PATH`.
+2. Terminal 1: `npm run dev`.
+3. Terminal 2: `npm run tunnel`.
+4. Open the printed HTTPS URL on the phone.
+
+Do not use the plain **Network** URL that Vite prints. It is `http://`, so WebXR and the microphone are blocked.
+
+### Starting VR
+
+1. Open the secure URL (`http://localhost:5173` over USB, or the HTTPS address).
+2. The lobby status line reports one of `WebXR disponibil`, `WebXR cere HTTPS`, `WebXR lipsește din browser`, or `WebXR fără immersive-vr`.
+3. Press the primary button and allow the session if the browser asks.
+4. Put the phone into the headset. The prologue plays, then fades into the living room.
+
+Android Chrome with only a Cardboard viewer usually does not expose `immersive-vr`. Use a WebXR-capable headset browser for the full experience.
+
+The renderer is **monoscopic by default**: both eyes receive the same image, which avoids double points on viewers with imperfect lens alignment. Add `?stereo` for true stereo.
+
+## URL options
+
+| Parameter | Effect |
+| --- | --- |
+| `?mode=desktop` | Start directly in the room with mouse and keyboard |
+| `?zi=17` or `?day=17` | Start that day with default variables (15–22; only days with a `data/zNN.json` file exist) |
+| `?debug` or `?debug=1` | Free-fly debug camera (also **Ctrl+Shift+`**) |
+| `?logs` | On-screen panel with `[ana]`, `[z17]`, `[day]`, `[audio]`, `[media]` logs; in dev, tagged logs are also relayed to the Vite terminal as `[phone] ...` |
+| `?stereo` | True stereo instead of the default monoscopic render |
 
 ## Controls
 
 | Surface | Action |
 | --- | --- |
-| Lobby | **Intră în VR** starts WebXR. WebXR is the only VR entry; there is no Cardboard fallback. **Deschide pe desktop** opens the mouse and keyboard view |
-| VR prologue | Plays automatically and fills the view. Look around with the headset; the screen follows the head. When the film ends it fades into the room |
-| Desktop | Fullscreen on entry. Drag to look. W A S D or the arrow keys to move. **Esc** returns to the lobby |
-| Room | Look with the headset. Hold your gaze on an object or on a navigation tag for about 1.5 seconds to interact or move |
+| Lobby | Primary button starts the game. **Deschide pe desktop** opens the mouse and keyboard view |
+| VR prologue | Plays automatically and fills the view. It follows the head. When it ends it fades into the room |
+| Desktop | Fullscreen on entry. Drag to look, **W A S D** or arrow keys to move, **Esc** returns to the lobby |
+| Room | Look with the headset or mouse. Hold the gaze on an object or navigation tag for about 1.5 s to interact or move |
 | HUD | **Ieși** leaves desktop mode |
-| Debug | **Ctrl+Shift+`** or `?debug` toggles the free-fly debug camera. See below |
+| Debug | **Ctrl+Shift+`** or `?debug`. **WASD** move, **Q/E** down/up, **Shift** faster, click to capture the mouse, **C** copy pose, **P** add waypoint, **L** copy waypoints, **Delete** clear |
 
-The film is unmuted when it starts. If the browser blocks audio, it retries muted so the picture still plays. Voiceover and subtitles are not in the build yet.
+## Scripts
 
-## Scene prep debug
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server with `--host` on port 5173 |
+| `npm run build` | TypeScript check, then Vite production build into `dist/` |
+| `npm run preview` | Serves `dist/` on port 4173 |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run reverse:dev` | `adb reverse tcp:5173 tcp:5173` |
+| `npm run reverse:preview` | `adb reverse tcp:4173 tcp:4173` |
+| `npm run tailscale:login` | `tailscale up` |
+| `npm run tailscale:serve` | `tailscale serve --bg 5173` |
+| `npm run tailscale:status` | `tailscale serve status` |
+| `npm run tailscale:url` | Prints `https://<machine>.<tailnet>.ts.net/` |
+| `npm run tunnel` | Cloudflare quick tunnel to `http://localhost:5173` |
+| `npm run tunnel:preview` | Cloudflare quick tunnel to `http://localhost:4173` |
+| `npm run model:ktx2` | Rebuilds the KTX2/ETC1S apartment model |
+| `npm run poster` | Regenerates the prologue poster and cut frames |
+| `npm run smoke` | Legacy headless smoke test. It still asserts removed UI and will fail; do not use it as proof |
 
-Press **Ctrl+Shift+`** (or add `?debug` to the URL) to toggle the debug camera in the lobby or desktop mode. It takes over the camera and hides the lobby overlay.
+## Regenerating assets
 
-- **WASD** or the arrow keys move. **Q/E** move down and up. **Shift** moves faster.
-- Click the canvas to capture the mouse, then move the mouse or touchpad to look. **Esc** releases the pointer.
-- The HUD shows the world position, yaw and pitch, the object under the crosshair, and the hit point.
-- **C** copies the current pose, **P** adds a waypoint, **L** copies all waypoints, and **Delete** clears them.
+The checked-in files work as-is. These steps are only needed when the source media changes.
 
-Use the copied poses to define transitions, movement bounds, and interactive targets. The values are in the apartment model's world space, in metres and radians. Turning debug off returns to the lobby, or resumes desktop mode at the current pose.
-
-## Layout
-
-```
-index.html            lobby markup
-assets/models/        romconfort-source.glb, the 2K source model
-public/basis/         KTX2/Basis transcoder files used by KTX2Loader
-public/media/         prologue.mp4 and the generated poster
-public/models/        romconfort.glb, the KTX2/ETC1S apartment
-src/cache.ts          Cache Storage download, progress, retries, persistence
-src/main.ts           starts the app, wires the lobby, applies ?mode= and ?debug
-src/app.ts            render loop, camera rig, lobby, desktop, and WebXR transitions
-src/lobby/lobby.ts    lobby wiring and status/toast state
-src/lobby/lobby.css   lobby styling
-src/scene/prologue.ts full-view VR prologue screen, layout, and film fade
-src/scene/room.ts     GLB apartment loader, placeholder shell, and room lights
-src/scene/hint.ts     head-locked gaze hint shown at session start
-src/cardboard/stereo.ts       legacy Cardboard stereo render, unused
-src/cardboard/orientation.ts  legacy gyroscope control, unused
-src/xr/session.ts     WebXR support check and session start
-src/textures.ts       canvas textures for the prologue and the old room pieces
-src/input/desktop.ts  drag look and movement
-src/debug/debug.ts    free-fly debug camera, raycast target, and waypoint HUD
-src/debug/debug.css   debug HUD and crosshair styling
-scripts/ktx2-model.mjs  converts the source model to KTX2/ETC1S
-scripts/poster.mjs    poster and cut frames from prologue.mp4
-scripts/tailscale.mjs locates Tailscale and runs serve/login/url
-scripts/smoke.mjs     stale headless browser check, see below
-```
-
-The mode is `'lobby' | 'desktop' | 'cardboard' | 'vr'`, held in `src/app.ts` and mirrored to `document.body.dataset.mode`. The lobby is visible only while the mode is `'lobby'`. The `'cardboard'` value and the matching modules are legacy; the lobby no longer enters them.
-
-The VR entry starts `src/scene/prologue.ts`. The prologue is a camera-attached screen at 2 m. It is sized to cover each stereo eye, so the 16:9 film fills the view and is center-cropped. The black backdrop stays behind it for the fade. The video is created by the prologue module and kept off-screen; there is no prologue markup in `index.html`. When the film ends the screen fades over one second and the reticle and hint appear. The mode never changes during the transition, so the viewer stays in VR.
-
-## Check your work
-
-The smoke test in `scripts/smoke.mjs` is not maintained. It still asserts the removed scrollable prologue, the beats, the dossier, the CTA, the sound toggle, and the replay control, so it will fail against this build. Do not use it as proof. Verify the build and the real phone instead:
+**Apartment model.** `npm run model:ktx2` reads `assets/models/romconfort-source.glb`, converts its WebP textures to PNG, then encodes KTX2/ETC1S into `public/models/romconfort.glb`. It needs KTX-Software with `ktx` on `PATH`, or set `KTX_PATH` to the executable. Pass a quality value through npm:
 
 ```powershell
-npm run build
+npm run model:ktx2 -- 192
 ```
 
-Then open the app on the WebXR device and walk the flow by hand.
+The intermediate file goes to `.artifacts/romconfort-png.glb` and is deleted on success.
+
+**Prologue poster and cuts.** `npm run poster` reads `public/media/prologue.mp4` and writes `public/media/prologue-poster.jpg` plus frames in `.artifacts/cuts/`. It drives a headless Chrome or Edge. Override the times or ports with environment variables:
+
+```powershell
+$env:POSTER_CUTS='0,2,4,6,8.3'
+$env:BROWSER_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
+npm run poster
+```
+
+It also accepts `POSTER_TIME`, `POSTER_PORT`, and `POSTER_DEBUG_PORT`.
+
+**Day content.** Days are bundled from `data/z*.json` (`src/game/days.ts`). Add `data/z22.json` and it becomes available to the runner automatically. Media paths in a day file are relative to `public/`.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| Ana answers with the recorded line | The live session did not start. Check the `[ana]` lines: `microphone denied` or `Microphone not available` means the mic or secure context failed; `connection failed (...)` carries the network or agent error. Use `localhost`/HTTPS, grant microphone access, and confirm the agent is public and has overrides enabled |
+| No microphone prompt on the phone | The page is on plain HTTP. Use `adb reverse` (`http://localhost:5173`) or Tailscale/Cloudflare HTTPS |
+| `WebXR cere HTTPS` | The origin is not secure. `localhost` and HTTPS are secure; a LAN IP is not |
+| `WebXR lipsește din browser` / `WebXR fără immersive-vr` | The browser or headset does not expose `immersive-vr`. Use a WebXR-capable headset browser |
+| `adb devices` shows `unauthorized` | Unlock the phone and accept the RSA prompt; revoke USB debugging authorizations and reconnect if it never appears |
+| `npm run reverse:dev` says `adb` is not recognized | Install Android Platform Tools and add the folder to `PATH`, then reopen the terminal |
+| Model stuck on the loading shell or 404 | Confirm `public/models/romconfort.glb` exists; rebuild it with `npm run model:ktx2`. The first load is about 100 MB and is cached per origin afterward |
+| Tailscale URL loads nothing | The dev server is not on 5173. Free the port or change the `tailscale:serve` script to the actual port |
+| `[media] Could not preload ...` warnings | Some optional clips are not produced yet; those assets load on demand and the scene continues |
+
+## Project layout
+
+```
+index.html                 lobby markup
+data/                      day files, z15.json through z21.json
+assets/models/             romconfort-source.glb, the 93 MB source model
+public/models/             romconfort.glb, the KTX2/ETC1S apartment
+public/media/              prologue, voice, ambient, SFX, images, video loops
+public/basis/, public/draco/   decoders used by Three loaders
+src/main.ts                boot, lobby wiring, URL flags
+src/app.ts                 render loop, camera rig, desktop/WebXR transitions
+src/game/runner.ts         data-driven day runner and extension point
+src/game/z17/              day-17 actions, Ana conversation, peephole helpers
+src/game/z20/, src/game/z21/   later-day extensions
+src/scene/                 room loader, prologue, interaction, reticle, hints
+src/lobby/                 lobby markup wiring and styling
+src/debug/                 free-fly camera and log relay/panel
+src/input/desktop.ts       drag look and movement
+src/xr/session.ts          WebXR support check and session start
+scripts/                   model, poster, Tailscale, smoke helpers
+```
 
 ## Known limits
 
-- Phone-only Cardboard has three degrees of freedom and no position tracking. WebXR headsets can provide position tracking; the app still uses one seated viewpoint.
-- Long documents need a reading mode that leaves stereo, so plan the newspaper and diary UI around that.
-- The KTX2 apartment is about 100 MB to download, but its textures stay compressed in GPU memory instead of expanding to full RGBA. The first load is still large; it is cached in Cache Storage after a successful download and reused on later loads at the same origin.
-- ETC1S is the smaller KTX2 codec. Normal and metallic-roughness maps can look blocky up close; if quality matters more than memory, rebuild with UASTC for those slots.
-- The room still uses several point lights and a few transmission/clearcoat materials. If the phone renders but the framerate is low, reduce the lights or disable transmission next.
-- The room has no collision, no baked lighting, and no audio. The debug camera is the current way to choose movement limits.
-- The prologue film is a reconstruction with diegetic sound and no voiceover or subtitles yet. It is not an archive recording.
-- The audio fallback can mute the film when the browser blocks playback, which will be more noticeable once the narration lands.
+- One seated viewpoint. WebXR headsets may track position, but the experience does not use locomotion beyond the authored transitions.
+- The KTX2 apartment is about 100 MB on first download. It is cached in Cache Storage per origin and reused on later loads.
+- ETC1S is the smaller KTX2 codec. Normal and metallic-roughness maps can look blocky up close; rebuild with UASTC if quality matters more than memory.
+- The room has no collision and no baked lighting. Several point lights and a few transmission/clearcoat materials keep it expensive on phones.
+- The prologue film is a reconstruction with diegetic sound, not archival footage and not a complete voiceover.
