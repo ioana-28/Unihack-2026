@@ -206,7 +206,8 @@ export class App {
     gameState.decizie_z18 = null
   }
 
-  enterDesktop(day = this.startDayNumber): void {
+  /** `onlyThisDay` = a day button: play just that day, then back to the start screen. */
+  enterDesktop(day = this.startDayNumber, onlyThisDay = false): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
     this.audio.resume()
@@ -221,6 +222,7 @@ export class App {
     this.interaction.setEnabled(true)
     this.setMode('desktop')
     this.startDayNumber = day
+    this.runner.setSingleDay(onlyThisDay)
     void this.runner.start(day)
   }
 
@@ -331,11 +333,12 @@ export class App {
     this.debug.activate()
   }
 
-  async enterVR(day = this.startDayNumber): Promise<void> {
+  async enterVR(day = this.startDayNumber, onlyThisDay = false): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
     this.audio.resume()
     this.startDayNumber = day
+    this.runner.setSingleDay(onlyThisDay)
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
     try {
