@@ -6,6 +6,10 @@ import { GameAudio } from './game/audio'
 import { Overlay } from './game/overlay'
 import { RoomFx } from './game/room-fx'
 import { DayRunner } from './game/runner'
+import { gameState, resetGame } from './game/state'
+import './game/z17'
+import './game/z20'
+import './game/z21'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { getMediaProgress, isMediaReady, startMediaPreload } from './preload'
@@ -31,6 +35,15 @@ const CARDBOARD_HUD_DISTANCE = 10
 const WEBXR_HUD_DISTANCE = 50
 const RETICLE_REFERENCE = 1.1
 const HINT_REFERENCE = 1.2
+
+/** Demo jump: `?zi=17` (or `?day=17`) starts that day with default variables. */
+function startDay(): number {
+  const params = new URLSearchParams(window.location.search)
+  const zi = Number(params.get('zi') ?? params.get('day'))
+  if (!Number.isInteger(zi) || zi < 15 || zi > 22) return 15
+  resetGame()
+  return zi
+}
 
 function requestOrientationPermission(): Promise<void> {
   const constructor = window.DeviceOrientationEvent as unknown as {
@@ -72,9 +85,12 @@ export class App {
   private mono = true
   private compiled = false
   private xrCompiled = false
+  private startDayNumber = 15
+  private vrCountdown = 0
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
+    this.startDayNumber = startDay()
     void startMediaPreload()
 
     this.renderer = new THREE.WebGLRenderer({
@@ -167,6 +183,7 @@ export class App {
       moveTo: (id) => this.interaction.moveTo(id),
       moveToPoint: (point) => this.interaction.moveToPoint(point),
       onFinished: () => this.returnToStart(),
+      isXR: () => this.renderer.xr.isPresenting,
     })
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
 
@@ -180,7 +197,16 @@ export class App {
     this.renderer.setAnimationLoop(this.frame)
   }
 
-  enterDesktop(): void {
+  /** Selects the day (and its test variables) used by the next lobby entry. */
+  setStartSelection(day: number, filmAscuns: boolean, aDatNumele: boolean): void {
+    this.startDayNumber = day
+    gameState.film_ascuns = filmAscuns
+    gameState.a_dat_numele = aDatNumele
+    gameState.film_confiscat = false
+    gameState.decizie_z18 = null
+  }
+
+  enterDesktop(day = this.startDayNumber): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
     this.audio.resume()
@@ -194,7 +220,8 @@ export class App {
     this.interaction.setMode('desktop')
     this.interaction.setEnabled(true)
     this.setMode('desktop')
-    void this.runner.start(15)
+    this.startDayNumber = day
+    void this.runner.start(day)
   }
 
   /** Leaves the game (desktop or VR) and shows the start screen. */
@@ -256,6 +283,9 @@ export class App {
 
   private handleObjectActivate(key: string): void {
     if (key !== 'newspaper') return
+    // Day 18 owns the newspaper close-up so it can show ziar_z18 and close on
+    // look-away. Other days keep the existing page-flip popup.
+    if (gameState.zi === 18) return
     if (this.mode !== 'desktop' && this.mode !== 'vr') return
     this.hint.object.visible = false
     this.interaction.setEnabled(false)
@@ -301,10 +331,11 @@ export class App {
     this.debug.activate()
   }
 
-  async enterVR(): Promise<void> {
+  async enterVR(day = this.startDayNumber): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
     this.audio.resume()
+    this.startDayNumber = day
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
     try {
@@ -332,8 +363,8 @@ export class App {
       this.interaction.reset()
       this.interaction.setMode('vr')
       this.interaction.setEnabled(false)
-      this.prologue.start()
       this.setMode('vr')
+      this.startVrCountdown(10, () => this.prologue.start())
 
       if (!this.xrCompiled) {
         this.xrCompiled = true
@@ -404,6 +435,8 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
+    this.clearVrCountdown()
+    this.overlay.title.hide()
     this.runner.stop()
     this.newspaper.close()
     this.interaction.setEnabled(false)
@@ -422,6 +455,7 @@ export class App {
 
   dispose(): void {
     window.removeEventListener('resize', this.handleResize)
+    this.clearVrCountdown()
     window.removeEventListener('orientationchange', this.handleResize)
     window.visualViewport?.removeEventListener('resize', this.handleResize)
     window.removeEventListener('keydown', this.handleKeyDown)
@@ -477,7 +511,33 @@ export class App {
     this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
     this.interaction.setEnabled(true)
     this.showHint()
-    void this.runner.start(15)
+    void this.runner.start(this.startDayNumber)
+  }
+
+  /** Head-locked countdown so the player can settle into the headset. */
+  private startVrCountdown(seconds: number, done: () => void): void {
+    this.clearVrCountdown()
+    let remaining = seconds
+    const show = (): void => {
+      this.overlay.title.show(`Începem în ${remaining}`, 1.2)
+    }
+    show()
+    this.vrCountdown = window.setInterval(() => {
+      remaining -= 1
+      if (remaining <= 0) {
+        this.clearVrCountdown()
+        this.overlay.title.hide()
+        if (this.mode === 'vr') done()
+        return
+      }
+      show()
+    }, 1000)
+  }
+
+  private clearVrCountdown(): void {
+    if (this.vrCountdown === 0) return
+    window.clearInterval(this.vrCountdown)
+    this.vrCountdown = 0
   }
 
   private setHudDistance(distance: number): void {

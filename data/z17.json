@@ -1,0 +1,307 @@
+{
+  "zi": 17,
+  "data": "Duminică, 17 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_plina17.jpg",
+  "ambient": [
+    {
+      "src": "media/audio/ambient/vant.mp3",
+      "la": "fereastra",
+      "volum": 0.06
+    }
+  ],
+  "start": [
+    {
+      "tip": "titlu",
+      "text": "Duminică, 17 decembrie 1989",
+      "secunde": 3
+    }
+  ],
+  "pasi": [
+    {
+      "id": "17.1",
+      "obiect": "fereastra",
+      "indiciu": {
+        "text": "Uită-te pe fereastră.",
+        "dupa": 0,
+        "repeta": 20
+      },
+      "actiuni": [
+        {
+          "tip": "privire_poza",
+          "cadre": [
+            {
+              "imagine": "media/img/img_piata_plina17.jpg",
+              "video": "media/video/video_piata_plina17.mp4",
+              "secunde": 8
+            },
+            {
+              "imagine": "media/img/img_piata_tancuri_zi_17.jpg",
+              "secunde": 8
+            }
+          ],
+          "poza": {
+            "la_secunda": 2,
+            "sunet": "media/audio/sfx/declansator.mp3",
+            "text": "Clic. Radu a fotografiat tancurile.",
+            "secunde": 3
+          },
+          "sunet": "media/audio/sfx/senile.mp3",
+          "volum": 2.5
+        },
+        {
+          "tip": "fereastra",
+          "src": "media/img/img_piata_tancuri_zi_17.jpg"
+        }
+      ],
+      "pauza_dupa": 3
+    },
+    {
+      "id": "17.2",
+      "actiuni": [
+        {
+          "tip": "suna_usa",
+          "sunet": "media/audio/sfx/sonerie.mp3",
+          "volum": 1,
+          "indiciu": {
+            "text": "Cineva sună la ușă.",
+            "dupa": 0,
+            "repeta": 10
+          }
+        },
+        {
+          "tip": "vizor_ana",
+          "asculta": "media/video/ana_z17_asculta.mp4",
+          "vorbeste": "media/video/ana_z17_vorbeste.mp4",
+          "prima_replica": "Radule… Sorin n-a venit. L-ai văzut de la geam?",
+          "max_secunde": 90,
+          "privire_in_afara": 3,
+          "rezerva": {
+            "src": "media/audio/voce/ana_z17_rezerva.mp3",
+            "subtitrare": "Sorin n-a venit acasă… A zis că merge doar până în centru. Dacă-l vezi de la geam, strigă-mă, Radule."
+          }
+        },
+        {
+          "tip": "deblocheaza"
+        }
+      ]
+    },
+    {
+      "id": "17.3",
+      "actiuni": [
+        {
+          "tip": "televizor_17_oprit"
+        },
+        {
+          "tip": "fereastra",
+          "src": "media/img/img_piata_tancuri_noapte_17.jpg"
+        },
+        {
+          "tip": "lumina_treptata",
+          "lumina": "noapte",
+          "secunde": 5
+        }
+      ]
+    },
+    {
+      "id": "17.4",
+      "obiect": "fereastra",
+      "indiciu": {
+        "text": "Uită-te pe fereastră.",
+        "dupa": 0,
+        "repeta": 20
+      },
+      "actiuni": [
+        {
+          "tip": "privire_atac",
+          "cadre": [
+            {
+              "imagine": "media/img/img_piata_tancuri_noapte_17.jpg",
+              "video": "media/video/video_piata_tancuri_noapte_17.mp4",
+              "secunde": 8
+            }
+          ],
+          "foc": {
+            "src": "media/audio/sfx/rafale.mp3",
+            "volum_start": 0.6,
+            "volum_final": 1.6
+          },
+          "impuscatura": "media/audio/sfx/impuscatura_aproape.mp3",
+          "negru_secunde": 1,
+          "impuscaturi": {
+            "src": "media/audio/sfx/impuscatura_aproape.mp3",
+            "interval_start": 1.5,
+            "interval_final": 0.4,
+            "volum_start": 0.6,
+            "volum_final": 1.6
+          },
+          "impuscatura_volum": 2
+        }
+      ]
+    },
+    {
+      "id": "17.4a",
+      "actiuni": [
+        {
+          "tip": "ascunde_in_cada",
+          "text_rosu": "Se trage spre bloc! Ascunde-te în cadă!",
+          "pozitie_baie": "bathroom",
+          "cada": "FIX_BAIE_Bathtub"
+        }
+      ]
+    },
+    {
+      "id": "17.4b",
+      "actiuni": [
+        {
+          "tip": "in_cada",
+          "cada": "FIX_BAIE_Bathtub",
+          "secunde": 10,
+          "liniste": 2,
+          "text": "Împușcăturile s-au oprit. Ești în siguranță.",
+          "text_secunde": 3,
+          "pozitie_final": "livingCouch"
+        }
+      ],
+      "pauza_dupa": 2
+    },
+    {
+      "id": "17.5",
+      "actiuni": [
+        {
+          "tip": "suna_usa",
+          "sunet": "media/audio/sfx/usa_bataie.mp3",
+          "volum": 1,
+          "indiciu": {
+            "text": "Cineva bate la ușă.",
+            "dupa": 0,
+            "repeta": 10
+          }
+        },
+        {
+          "tip": "vizor",
+          "imagine": "media/img/vizor_hol_gol.jpg",
+          "actiuni": [
+            {
+              "tip": "voce_replici",
+              "src": "media/audio/voce/ioana_z17.mp3",
+              "replici": [
+                {
+                  "text": "Radule, eu sunt!",
+                  "de_la": 0
+                },
+                {
+                  "text": "Au tras în oameni. M-am ascuns într-o scară de bloc până s-a făcut liniște.",
+                  "de_la": 2.1
+                },
+                {
+                  "text": "Iau pe toți care au fost acolo. Și pe cei care au poze. Ascunde filmul ăla.",
+                  "de_la": 6.8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tip": "deblocheaza"
+        }
+      ]
+    },
+    {
+      "id": "17.6",
+      "actiuni": [
+        {
+          "tip": "alegere",
+          "secunde": 2,
+          "optiuni": [
+            {
+              "text": "Ascunde filmul în bucătărie.",
+              "actiuni": [
+                {
+                  "tip": "ascunde_borcan",
+                  "borcan": "Salsa Verde Sauce Jar",
+                  "pozitie": "kitchen",
+                  "indiciu": {
+                    "text": "Ascunde filmul în borcanul de castraveți.",
+                    "dupa": 0,
+                    "repeta": 20
+                  },
+                  "text": "Filmul e ascuns după castraveți.",
+                  "secunde": 3
+                },
+                {
+                  "tip": "flag",
+                  "nume": "film_rezolvat"
+                },
+                {
+                  "tip": "indiciu",
+                  "text": "Rupe fila din calendar ca să treacă ziua."
+                }
+              ]
+            },
+            {
+              "text": "Lasă-l în aparat.",
+              "actiuni": [
+                {
+                  "tip": "variabila",
+                  "nume": "film_ascuns",
+                  "valoare": false
+                },
+                {
+                  "tip": "flag",
+                  "nume": "film_rezolvat"
+                },
+                {
+                  "tip": "indiciu",
+                  "text": "Rupe fila din calendar ca să treacă ziua."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "calendar": {
+    "necesita": {
+      "pasi": [
+        "17.1",
+        "17.2",
+        "17.4",
+        "17.4b",
+        "17.5",
+        "17.6"
+      ],
+      "flaguri": [
+        "film_rezolvat"
+      ]
+    },
+    "refuz": {
+      "text": "Continuă să explorezi.",
+      "secunde": 3
+    },
+    "actiuni": [
+      {
+        "tip": "sunet",
+        "src": "media/audio/sfx/hartie_rupta.mp3",
+        "la": "calendar"
+      },
+      {
+        "tip": "fade",
+        "spre": 1,
+        "secunde": 1
+      },
+      {
+        "tip": "text",
+        "text": "Azi am auzit cum sună o armă adevărată. Nu seamănă cu filmele.",
+        "secunde": 4
+      },
+      {
+        "tip": "zi_urmatoare",
+        "lipsa_text": "Sfârșitul zilei 17 — continuare în curând",
+        "secunde": 4
+      }
+    ]
+  }
+}

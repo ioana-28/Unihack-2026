@@ -53,7 +53,9 @@
       "tag": "Intrare",
       "position": { "x": 6.317, "y": 1.272, "z": -1.458 },
       "facing": "entryDoor",
-      "interactables": null
+      "interactables": {
+        "entryDoor": "Privește pe vizor"
+      }
     },
     "kitchen": {
       "label": "Kitchen",

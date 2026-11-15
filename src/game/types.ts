@@ -6,10 +6,12 @@ export type ObiectId =
   | 'radio'
   | 'telefon'
   | 'fereastra'
+  | 'usa'
   | 'ziar'
   | 'calendar'
   | 'frigider'
   | 'televizor'
+  | 'usa'
 
 export type Lumina = 'zi' | 'seara' | 'noapte'
 

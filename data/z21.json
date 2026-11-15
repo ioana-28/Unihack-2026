@@ -1,0 +1,176 @@
+{
+  "zi": 21,
+  "data": "Joi, 21 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_grupuristeaguri_21.jpg",
+  "optionale": [
+    "frigider"
+  ],
+  "ambient": [
+    {
+      "src": "media/audio/ambient/vant.mp3",
+      "la": "fereastra",
+      "volum": 0.06
+    }
+  ],
+  "start": [
+    {
+      "tip": "titlu",
+      "text": "Joi, 21 decembrie 1989",
+      "secunde": 3
+    },
+    {
+      "tip": "ecran_tv_21"
+    },
+    {
+      "tip": "multime_crescatoare",
+      "src": "media/audio/ambient/multime_z20.mp3",
+      "volum_start": 1.8,
+      "volum_final": 1.8,
+      "secunde": 1
+    }
+  ],
+  "pasi": [
+    {
+      "id": "21.0",
+      "actiuni": [
+        {
+          "tip": "asteapta",
+          "secunde": 1
+        },
+        {
+          "tip": "subtitrare",
+          "text": "Afară, mulțimea strigă atât de tare că se aude prin geamuri.",
+          "secunde": 4
+        }
+      ]
+    },
+    {
+      "id": "21.1",
+      "obiect": "televizor",
+      "indiciu": {
+        "text": "Pornește televizorul.",
+        "dupa": 0,
+        "repeta": 20
+      },
+      "actiuni": [
+        {
+          "tip": "emisiune_tv",
+          "video": "media/video/tv_21_meeting_mp4.mp4",
+          "volum": 1.6,
+          "secunde": 15,
+          "subtitrari": [
+            {
+              "text": "Aceleași aplauze la comandă.",
+              "de_la": 0.3,
+              "secunde": 2.5
+            },
+            {
+              "text": "Stai, fluieră! Îl fluieră pe el!",
+              "de_la": 3.8,
+              "secunde": 4
+            }
+          ],
+          "la_final": {
+            "text": "Au încheiat transmisia!",
+            "secunde": 3
+          },
+          "sunet": "media/video/tv_21_meeting_mp4.mp4"
+        },
+        {
+          "tip": "asteapta",
+          "secunde": 2
+        },
+        {
+          "tip": "indiciu",
+          "text": "Rupe fila din calendar ca să treacă ziua."
+        }
+      ]
+    },
+    {
+      "id": "21.1b",
+      "activeaza": [
+        "radio",
+        "fereastra"
+      ]
+    }
+  ],
+  "obiecte": {
+    "radio": {
+      "actiuni": [
+        {
+          "tip": "voce",
+          "src": "media/audio/voce/radio_europa_z21.mp3",
+          "la": "radio",
+          "filtru": "radio",
+          "subtitrare": "La București, mitingul convocat de Nicolae Ceaușescu a fost întrerupt de huiduielile mulțimii. Revolta pornită la Timișoara se extinde în toată țara."
+        }
+      ]
+    },
+    "frigider": {
+      "actiuni": [
+        {
+          "tip": "text",
+          "text": "Câteva picioare de pui, un borcan de zacuscă, salam cu soia. Carnea bună pleca la export.",
+          "secunde": 5
+        }
+      ]
+    },
+    "fereastra": {
+      "actiuni": [
+        {
+          "tip": "privire_fereastra",
+          "cadre": [
+            {
+              "imagine": "media/img/img_piata_grupuristeaguri_21.jpg",
+              "secunde": 12
+            }
+          ],
+          "sunet": {
+            "src": "media/audio/ambient/multime_z20.mp3",
+            "volum": 5
+          }
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": {
+      "pasi": [
+        "21.1"
+      ],
+      "flaguri": []
+    },
+    "refuz": {
+      "text": "Continuă să explorezi.",
+      "secunde": 3
+    },
+    "actiuni": [
+      {
+        "tip": "sunet",
+        "src": "media/audio/sfx/hartie_rupta.mp3",
+        "la": "calendar"
+      },
+      {
+        "tip": "multime_stinge",
+        "secunde": 2
+      },
+      {
+        "tip": "fade",
+        "spre": 1,
+        "secunde": 1
+      },
+      {
+        "tip": "text",
+        "text": "Pentru prima dată, toată țara a râs de el. În același timp.",
+        "secunde": 5
+      },
+      {
+        "tip": "zi_urmatoare",
+        "lipsa_text": "Sfârșitul zilei 21 — continuare în curând",
+        "secunde": 4
+      }
+    ]
+  }
+}

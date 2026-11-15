@@ -158,11 +158,7 @@ export function createInteractionController(
   }
 
   const updatePrompt = (): void => {
-    if (flashUntil > performance.now()) {
-      reticle.setPrompt('ok')
-      return
-    }
-    if (target?.kind !== 'object') {
+    if (target?.kind !== 'object' || flashUntil > performance.now()) {
       reticle.setPrompt(null)
       return
     }
@@ -353,7 +349,7 @@ export function createInteractionController(
       dwell = 0
       flashUntil = performance.now() + FLASH_MS
       reticle.setProgress(0)
-      reticle.setPrompt('ok')
+      reticle.setPrompt(null)
 
       const key = target.key
       clearActivation()
