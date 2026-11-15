@@ -332,6 +332,12 @@ export class Peephole {
     this.panel.material.needsUpdate = true
   }
 
+  /** Width / height of the content (default 16:9); keeps the panel height. */
+  setAspect(aspect: number): void {
+    const height = 1.7 * (9 / 16)
+    this.panel.scale.set((height * aspect) / 1.7, 1, 1)
+  }
+
   isLookedAt(ctx: ActionContext): boolean {
     return this.group.visible && looksAt(ctx, this.panel)
   }

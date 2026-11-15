@@ -10,6 +10,7 @@ import {
   isUnder,
   gazeHit,
   loadImageTexture,
+  loadLoopVideo,
   looksAt,
   modelBounds,
   modelNode,
@@ -84,13 +85,24 @@ registerAction('suna_usa', async (a, ctx) => {
 
 registerAction('vizor', async (a, ctx) => {
   const peephole = new Peephole()
-  const image = await ctx.check(loadImageTexture(str(a.imagine)))
-  const texture = image ?? darkPeephole()
+  // A video (muted; its sound is the separate voice file) or, if missing, the still image.
+  const clip = a.video ? await ctx.check(loadLoopVideo(str(a.video))) : null
+  const image = clip ? null : await ctx.check(loadImageTexture(str(a.imagine)))
+  const texture = clip?.texture ?? image ?? darkPeephole()
+  if (clip) {
+    clip.video.loop = false
+    peephole.setAspect(clip.video.videoWidth / clip.video.videoHeight || 16 / 9)
+  }
   peephole.open(ctx, texture)
   ctx.onCleanup(() => peephole.close())
   try {
+    if (clip) {
+      clip.video.currentTime = 0
+      void clip.video.play().catch(() => undefined)
+    }
     await ctx.run(Array.isArray(a.actiuni) ? a.actiuni : [])
   } finally {
+    clip?.video.pause()
     peephole.close()
     texture.dispose()
   }
