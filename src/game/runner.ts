@@ -225,7 +225,7 @@ export class DayRunner {
     const delta = Math.min(0.1, Math.max(0, time - this.lastTime))
     this.lastTime = time
     for (const callback of [...this.frameCallbacks]) callback(time, delta)
-    const pulse = 0.12 + 0.22 * (0.5 + 0.5 * Math.sin(time * 2.6))
+    const pulse = 0.05 + 0.1 * (0.5 + 0.5 * Math.sin(time * 2.6))
     for (const [id, node] of this.nodes) {
       this.deps.fx.setGlow(node, this.glows(id) ? pulse : 0)
     }

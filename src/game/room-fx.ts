@@ -133,7 +133,7 @@ export class RoomFx {
         slot.material.emissive.copy(slot.color)
         slot.material.emissiveIntensity = slot.intensity
       } else {
-        slot.material.emissive.copy(slot.color).lerp(GLOW_COLOR, Math.min(1, amount * 2.5))
+        slot.material.emissive.copy(slot.color).lerp(GLOW_COLOR, Math.min(1, amount * 1.2))
         slot.material.emissiveIntensity = Math.max(slot.intensity, amount)
       }
     }
@@ -288,17 +288,15 @@ export class RoomFx {
     const normal = alongX
       ? new THREE.Vector3(Math.sign(toViewer.x), 0, 0)
       : new THREE.Vector3(0, 0, Math.sign(toViewer.z))
-    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), normal)
     const bodyWidth = alongX ? size.z : size.x
     const depth = alongX ? size.x : size.z
     // The bounds include the antennas, so estimate the cabinet height from its width.
     const bodyHeight = Math.min(size.y, bodyWidth * 0.62)
 
-    const screenWidth = bodyWidth * 0.66
-    const screenHeight = bodyHeight * 0.7
-    const screenCenter = new THREE.Vector3(center.x, box.min.y + bodyHeight * 0.52, center.z)
-      .addScaledVector(normal, depth / 2 + 0.004)
-      .addScaledVector(right, -bodyWidth * 0.1)
+    const screenWidth = bodyWidth * 0.94
+    const screenHeight = bodyHeight * 0.94
+    const screenCenter = new THREE.Vector3(center.x, box.min.y + bodyHeight / 2, center.z)
+      .addScaledVector(normal, depth / 2 + 0.006)
 
     this.staticCanvas = document.createElement('canvas')
     this.staticCanvas.width = 96

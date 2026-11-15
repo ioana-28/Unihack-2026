@@ -86,7 +86,7 @@ class TextPanel {
   private draw(text: string): void {
     const { ctx } = this
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
-    const sizes: Record<Style, number> = { subtitrare: 58, indiciu: 54, text: 60, titlu: 96 }
+    const sizes: Record<Style, number> = { subtitrare: 78, indiciu: 70, text: 78, titlu: 96 }
     let size = sizes[this.style]
     const font = (px: number): string =>
       this.style === 'indiciu'

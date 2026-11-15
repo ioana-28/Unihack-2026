@@ -22,7 +22,6 @@ const STATIC_VOLUME = 0.05
 const BUSY_FREQUENCY = 425
 const PREFIX = 'ziua16_'
 const FACING = new THREE.Vector3(0, 0, 1)
-const UP = new THREE.Vector3(0, 1, 0)
 
 export type Day16Deps = {
   audio: GameAudio
@@ -568,15 +567,13 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     const normal = alongX
       ? new THREE.Vector3(Math.sign(toViewer.x), 0, 0)
       : new THREE.Vector3(0, 0, Math.sign(toViewer.z))
-    const right = new THREE.Vector3().crossVectors(UP, normal)
     const bodyWidth = alongX ? size.z : size.x
     const depth = alongX ? size.x : size.z
     const bodyHeight = Math.min(size.y, bodyWidth * 0.62)
-    const screenWidth = bodyWidth * 0.66
-    const screenHeight = bodyHeight * 0.7
-    const screenCenter = new THREE.Vector3(center.x, box.min.y + bodyHeight * 0.52, center.z)
-      .addScaledVector(normal, depth / 2 + 0.004)
-      .addScaledVector(right, -bodyWidth * 0.1)
+    const screenWidth = bodyWidth * 0.94
+    const screenHeight = bodyHeight * 0.94
+    const screenCenter = new THREE.Vector3(center.x, box.min.y + bodyHeight / 2, center.z)
+      .addScaledVector(normal, depth / 2 + 0.006)
 
     const canvas = document.createElement('canvas')
     canvas.width = 96

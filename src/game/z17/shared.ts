@@ -143,7 +143,7 @@ export async function waitForGaze(
 export function glowWhile(ctx: ActionContext, object: THREE.Object3D | null): () => void {
   if (!object) return () => undefined
   const stopFrame = ctx.onFrame((time) => {
-    ctx.deps.fx.setGlow(object, 0.12 + 0.22 * (0.5 + 0.5 * Math.sin(time * 2.6)))
+    ctx.deps.fx.setGlow(object, 0.05 + 0.1 * (0.5 + 0.5 * Math.sin(time * 2.6)))
   })
   return () => {
     stopFrame()

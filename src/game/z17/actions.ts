@@ -538,7 +538,6 @@ registerAction('televizor_17', (a, ctx) => {
   const toViewer = new THREE.Vector3(spawn.x - center.x, 0, spawn.z - center.z)
   const alongX = Math.abs(toViewer.x) > Math.abs(toViewer.z)
   const normal = alongX ? new THREE.Vector3(Math.sign(toViewer.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(toViewer.z))
-  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), normal)
   const width = alongX ? size.z : size.x
   const depth = alongX ? size.x : size.z
   const bodyHeight = Math.min(size.y, width * 0.62)
@@ -549,13 +548,12 @@ registerAction('televizor_17', (a, ctx) => {
   const staticTexture = new THREE.CanvasTexture(staticCanvas)
   staticTexture.magFilter = THREE.NearestFilter
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(width * 0.66, bodyHeight * 0.7),
+    new THREE.PlaneGeometry(width * 0.94, bodyHeight * 0.94),
     new THREE.MeshBasicMaterial({ map: staticTexture, toneMapped: false, fog: false }),
   )
   screen.position
-    .set(center.x, box.min.y + bodyHeight * 0.52, center.z)
-    .addScaledVector(normal, depth / 2 + 0.005)
-    .addScaledVector(right, -width * 0.1)
+    .set(center.x, box.min.y + bodyHeight / 2, center.z)
+    .addScaledVector(normal, depth / 2 + 0.006)
   screen.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
   screen.raycast = () => undefined
   ctx.deps.room.add(screen)
