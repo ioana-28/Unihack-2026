@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { getState, STATES } from '../scene/states'
 import type { StateId, Vec3 } from '../scene/states'
 import type { GameAudio, Playback } from './audio'
+import { createDay19Extension } from './day19'
+import type { Day19Extension } from './day19'
 import { loadDay } from './days'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -71,9 +73,15 @@ export class DayRunner {
   private hints: Hint[] = []
   private ambient: { spec: Ambient; playback: Playback | null }[] = []
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
+  private readonly day19: Day19Extension
 
   constructor(deps: RunnerDeps) {
     this.deps = deps
+    this.day19 = createDay19Extension({
+      audio: deps.audio,
+      overlay: deps.overlay,
+      room: deps.room,
+    })
   }
 
   // ---------- Hooks for the interaction controller
@@ -154,6 +162,7 @@ export class DayRunner {
     this.hints = []
     this.ambient = []
     this.deps.audio.stopAll()
+    this.day19.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
     this.deps.fx.reset()
@@ -329,6 +338,7 @@ export class DayRunner {
       case 'ecran_tv':
         return this.tvView(a, gen)
       default:
+        if (this.day19.handles(a)) return this.check(this.day19.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
     }
@@ -407,11 +417,15 @@ export class DayRunner {
 
   private async nextDay(missingText: string, seconds: number, gen: number): Promise<void> {
     const { overlay } = this.deps
-    const zi = (this.day?.zi ?? 15) + 1
-    const next = await this.check(loadDay(zi), gen)
-    if (next) {
-      void this.start(zi)
-      return
+    const current = this.day?.zi ?? 15
+    // Skip day files that do not exist yet, so the story can continue on the
+    // next playable day during development.
+    for (let zi = current + 1; zi <= 99; zi += 1) {
+      const next = await this.check(loadDay(zi), gen)
+      if (next) {
+        void this.start(zi)
+        return
+      }
     }
     await this.check(overlay.fade(1, 0.3), gen)
     overlay.title.show(missingText, seconds)

@@ -1,0 +1,75 @@
+{
+  "zi": 19,
+  "data": "Marți, 19 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_doarsoldati_19.jpg",
+  "optionale": ["radio"],
+  "ambient": [
+    { "src": "media/audio/ambient/vant.mp3", "la": "fereastra", "volum": 0.06 },
+    { "src": "media/audio/ambient/ceas.mp3", "volum": 0.1 },
+    { "src": "media/audio/ambient/frigider.mp3", "la": "frigider", "volum": 0.06 }
+  ],
+  "start": [
+    { "tip": "ziua19_tv_static" },
+    { "tip": "titlu", "text": "Marți, 19 decembrie 1989", "secunde": 3 }
+  ],
+  "pasi": [
+    {
+      "id": "19.1",
+      "obiect": "fereastra",
+      "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "privire_fereastra",
+          "cadre": [
+            { "imagine": "media/img/img_piata_doarsoldati_19.jpg", "secunde": 10 }
+          ],
+          "sunet": { "src": "media/audio/ambient/vant.mp3", "volum": 0.3 }
+        }
+      ]
+    },
+    {
+      "id": "19.2",
+      "indiciu": {
+        "text": "Radioul prinde și posturi străine.",
+        "dupa": 0,
+        "pana_la_flag": "radio_folosit"
+      }
+    },
+    {
+      "id": "19.3",
+      "indiciu": {
+        "text": "Rupe fila din calendar ca să treacă ziua.",
+        "dupa": 0,
+        "repeta": 20
+      }
+    }
+  ],
+  "obiecte": {
+    "radio": {
+      "actiuni": [
+        { "tip": "flag", "nume": "radio_folosit" },
+        {
+          "tip": "ziua19_radio",
+          "src": "media/audio/voce/radio_sarb_z19.mp3",
+          "subtitrare": "Din Timișoara sosesc vești că muncitorii din mai multe fabrici au oprit lucrul. Printre ei, și cei de la Elba."
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": { "pasi": ["19.1"], "flaguri": [] },
+    "refuz": { "text": "Continuă să explorezi.", "secunde": 3 },
+    "actiuni": [
+      { "tip": "sunet", "src": "media/audio/sfx/hartie_rupta.mp3", "la": "calendar" },
+      { "tip": "fade", "spre": 1, "secunde": 1 },
+      { "tip": "text", "text": "Muncitorii de la Elba au ieșit. Fabrica mea.", "secunde": 4 },
+      {
+        "tip": "zi_urmatoare",
+        "lipsa_text": "Sfârșitul zilei 19 — continuare în curând",
+        "secunde": 4
+      }
+    ]
+  }
+}
