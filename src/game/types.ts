@@ -10,6 +10,7 @@ export type ObiectId =
   | 'calendar'
   | 'frigider'
   | 'televizor'
+  | 'usa'
 
 export type Lumina = 'zi' | 'seara' | 'noapte'
 

@@ -30,5 +30,18 @@
     "@types/webxr": "^0.5.24",
     "typescript": "~5.9.3",
     "vite": "^8.3.8"
-  }
+  },
+  "description": "A seated VR experience set in a Timișoara apartment during the week of 15 to 22 December 1989.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ioana-28/Unihack-2026.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ioana-28/Unihack-2026/issues"
+  },
+  "homepage": "https://github.com/ioana-28/Unihack-2026#readme"
 }

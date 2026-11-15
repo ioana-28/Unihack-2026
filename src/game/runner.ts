@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { getState, STATES } from '../scene/states'
 import type { StateId, Vec3 } from '../scene/states'
 import type { GameAudio, Playback } from './audio'
+import { createDay18Extension } from './day18'
+import type { Day18Extension } from './day18'
 import { loadDay } from './days'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -27,6 +29,7 @@ const KEYS: Record<ObiectId, string> = {
   calendar: 'calendar',
   frigider: 'fridge',
   televizor: 'tv',
+  usa: 'entryDoor',
 }
 const OBIECT_FOR_KEY = new Map(Object.entries(KEYS).map(([id, key]) => [key, id as ObiectId]))
 
@@ -71,9 +74,17 @@ export class DayRunner {
   private hints: Hint[] = []
   private ambient: { spec: Ambient; playback: Playback | null }[] = []
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
+  private readonly extra: Day18Extension
 
   constructor(deps: RunnerDeps) {
     this.deps = deps
+    this.extra = createDay18Extension({
+      audio: deps.audio,
+      overlay: deps.overlay,
+      fx: deps.fx,
+      camera: deps.camera,
+      room: deps.room,
+    })
   }
 
   // ---------- Hooks for the interaction controller
@@ -154,6 +165,7 @@ export class DayRunner {
     this.hints = []
     this.ambient = []
     this.deps.audio.stopAll()
+    this.extra.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
     this.deps.fx.reset()
@@ -329,6 +341,7 @@ export class DayRunner {
       case 'ecran_tv':
         return this.tvView(a, gen)
       default:
+        if (this.extra.handles(a)) return this.check(this.extra.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
     }

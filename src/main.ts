@@ -1,5 +1,6 @@
 import './lobby/lobby.css'
 import { App } from './app'
+import { mountDay18Selector } from './game/day18-selector'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
@@ -43,6 +44,11 @@ lobby = mountLobby({
   },
   onDesktop: () => app.enterDesktop(),
   onExit: () => app.exitToLobby(),
+})
+
+mountDay18Selector({
+  onChange: (selection) =>
+    app.setStartSelection(selection.day, selection.filmAscuns, selection.aDatNumele),
 })
 
 lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)
