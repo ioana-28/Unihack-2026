@@ -1,7 +1,7 @@
 import { fetchCachedBlob, type LoadProgress } from './cache'
 import { assetUrl, loadAllDays } from './game/days'
 
-export const MEDIA_CACHE = 'apartment-media-2026-11-16'
+export const MEDIA_CACHE = 'apartment-media-2026-11-16-v2'
 
 const PROLOGUE_VERSION = '2026-11-14'
 export const PROLOGUE_VIDEO_URL =
@@ -103,6 +103,19 @@ async function loadOne(path: string): Promise<void> {
 export async function startMediaPreload(): Promise<void> {
   if (started) return
   started = true
+
+  if ('caches' in window) {
+    void caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names
+            .filter((name) => name.startsWith('apartment-media-') && name !== MEDIA_CACHE)
+            .map((name) => caches.delete(name)),
+        ),
+      )
+      .catch(() => undefined)
+  }
 
   const paths = new Set(FIXED_ASSETS)
   for (const day of await loadAllDays()) collectPaths(day, paths)

@@ -63,6 +63,10 @@ async function loadBlob(url: string, options: CacheOptions): Promise<Blob> {
   if (!response.ok) {
     throw new Error(`Request failed with HTTP ${response.status} ${response.statusText}`)
   }
+  const received = response.headers.get('content-type') ?? ''
+  if (options.contentType && options.contentType !== 'text/html' && received.includes('text/html')) {
+    throw new Error(`"${url}" is missing: the server returned HTML instead of ${options.contentType}`)
+  }
 
   const declared = Number(response.headers.get('content-length') ?? 0)
   const blob = await readResponse(response, declared, options.onProgress)
