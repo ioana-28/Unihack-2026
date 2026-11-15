@@ -41,7 +41,13 @@ lobby = mountLobby({
         lobby?.toast(vrFailureMessage(error))
       })
   },
-  onDesktop: () => app.enterDesktop(),
+  onDesktop: () => {
+    if (!app.isRoomReady()) {
+      lobby?.toast('Se incarca inca. Incearca din nou in cateva secunde.')
+      return
+    }
+    app.enterDesktop()
+  },
   onExit: () => app.exitToLobby(),
 })
 
@@ -88,11 +94,25 @@ function updateEntry(): boolean {
     return true
   }
 
-  const { loaded, total } = app.getModelProgress()
-  const percent = total > 0 ? Math.min(99, Math.max(1, Math.round((loaded / total) * 100))) : 0
+  if (!app.isModelReady()) {
+    const { loaded, total } = app.getModelProgress()
+    const percent = total > 0 ? Math.min(99, Math.max(1, Math.round((loaded / total) * 100))) : 0
+    lobby?.setEntry({
+      ...entryState,
+      hint: percent > 0 ? `Se incarca apartamentul... ${percent}%` : 'Se incarca apartamentul...',
+      disabled: vrAvailable,
+    })
+    return false
+  }
+
+  const media = app.getMediaProgress()
+  const percent = media.total > 0 ? Math.round((media.loaded / media.total) * 100) : 0
   lobby?.setEntry({
     ...entryState,
-    hint: percent > 0 ? `Se incarca apartamentul... ${percent}%` : 'Se incarca apartamentul...',
+    hint:
+      percent > 0
+        ? `Se descarca sunetele si clipurile... ${percent}%`
+        : 'Se pregatesc sunetele si clipurile...',
     disabled: vrAvailable,
   })
   return false

@@ -8,6 +8,7 @@ import { RoomFx } from './game/room-fx'
 import { DayRunner } from './game/runner'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
+import { getMediaProgress, isMediaReady, startMediaPreload } from './preload'
 import { createHintPanel } from './scene/hint'
 import { createInteractionController } from './scene/interaction'
 import type { InteractionController } from './scene/interaction'
@@ -74,6 +75,7 @@ export class App {
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
+    void startMediaPreload()
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -232,8 +234,16 @@ export class App {
     return this.room.getProgress()
   }
 
-  isRoomReady(): boolean {
+  isModelReady(): boolean {
     return this.room.isReady()
+  }
+
+  getMediaProgress(): ModelProgress {
+    return getMediaProgress()
+  }
+
+  isRoomReady(): boolean {
+    return this.room.isReady() && isMediaReady()
   }
 
   getModelError(): unknown | null {

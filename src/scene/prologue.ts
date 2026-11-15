@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 import { fetchCachedBlob } from '../cache'
+import {
+  mediaSrc,
+  MEDIA_CACHE,
+  PROLOGUE_POSTER_URL,
+  PROLOGUE_VIDEO_URL,
+} from '../preload'
 import { canvasTexture } from '../textures'
 
-const PROLOGUE_VERSION = '2026-11-14'
-const DEFAULT_VIDEO_URL = `/media/video_intro.mp4?v=${PROLOGUE_VERSION}`
-const VIDEO_URL =
-  new URLSearchParams(window.location.search).get('video') ?? DEFAULT_VIDEO_URL
-const VIDEO_CACHE = `apartment-video-${PROLOGUE_VERSION}`
 const SCREEN_DISTANCE = 2
 const BACKDROP_OVERSCAN = 1.3
 const FADE_SECONDS = 1
@@ -46,15 +47,15 @@ export function createPrologueScreen(
 
   const loadVideo = async (): Promise<void> => {
     try {
-      const blob = await fetchCachedBlob(VIDEO_URL, {
-        cacheName: VIDEO_CACHE,
+      const blob = await fetchCachedBlob(PROLOGUE_VIDEO_URL, {
+        cacheName: MEDIA_CACHE,
         contentType: 'video/mp4',
       })
       videoObjectUrl = URL.createObjectURL(blob)
       video.src = videoObjectUrl
     } catch (error) {
       console.error('Failed to cache the prologue video; falling back to the network', error)
-      video.src = VIDEO_URL
+      video.src = PROLOGUE_VIDEO_URL
     }
     video.load()
   }
@@ -67,7 +68,7 @@ export function createPrologueScreen(
   texture.magFilter = THREE.LinearFilter
   texture.generateMipmaps = false
 
-  const poster = new THREE.TextureLoader().load('/media/prologue-poster.jpg')
+  const poster = new THREE.TextureLoader().load(mediaSrc(PROLOGUE_POSTER_URL))
   poster.colorSpace = THREE.SRGBColorSpace
 
   const backdropMaterial = new THREE.MeshBasicMaterial({

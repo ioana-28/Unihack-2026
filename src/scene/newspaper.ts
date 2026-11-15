@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mediaSrc } from '../preload'
 import { canvasTexture } from '../textures'
 import type { Reticle } from './reticle'
 
@@ -405,7 +406,7 @@ export function createNewspaperPopup(options: NewspaperPopupOptions): NewspaperP
   const loader = new THREE.TextureLoader()
   PAGE_URLS.forEach((url, index) => {
     loader.load(
-      url,
+      mediaSrc(url),
       (texture) => {
         if (disposed) {
           texture.dispose()

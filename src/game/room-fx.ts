@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { assetUrl } from './days'
+import { mediaSrc } from '../preload'
 import type { Lumina } from './types'
 
 // Visual state of the apartment driven by the day: lighting, power cut,
@@ -224,7 +224,7 @@ export class RoomFx {
     if (!pending) {
       pending = new Promise((resolve) => {
         new THREE.TextureLoader().load(
-          assetUrl(src),
+          mediaSrc(src),
           (texture) => {
             texture.colorSpace = THREE.SRGBColorSpace
             resolve(texture)
@@ -267,7 +267,7 @@ export class RoomFx {
       )
       video.addEventListener('error', () => done(null), { once: true })
       window.setTimeout(() => done(null), 3000)
-      video.src = assetUrl(src)
+      video.src = mediaSrc(src)
       video.load()
     })
   }
@@ -423,7 +423,7 @@ export class RoomFx {
     video.addEventListener('error', () => console.warn(`[tv] Missing video "${src}"; showing static.`), {
       once: true,
     })
-    video.src = assetUrl(src)
+    video.src = mediaSrc(src)
     video.load()
     this.tvVideo = video
   }

@@ -4,6 +4,14 @@ import type { ZiData } from './types'
 // for the runner to continue into day 16.
 const files = import.meta.glob<ZiData>('/data/z*.json', { import: 'default' })
 
+/** Loads every day file up front (bundled chunks), so no request is needed later. */
+export async function loadAllDays(): Promise<ZiData[]> {
+  const days = await Promise.all(
+    Object.values(files).map((load) => load().catch(() => null)),
+  )
+  return days.filter((day): day is ZiData => day !== null)
+}
+
 export async function loadDay(zi: number): Promise<ZiData | null> {
   const load = files[`/data/z${zi}.json`]
   if (!load) return null

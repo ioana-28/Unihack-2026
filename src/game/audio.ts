@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { fetchCachedArrayBuffer } from '../cache'
+import { contentTypeFor, MEDIA_CACHE } from '../preload'
 import { assetUrl } from './days'
 
 // All game sound goes through one THREE.AudioListener on the camera, so
@@ -56,11 +58,10 @@ export class GameAudio {
   load(src: string): Promise<AudioBuffer | null> {
     let pending = this.buffers.get(src)
     if (!pending) {
-      pending = fetch(assetUrl(src))
-        .then((response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-          return response.arrayBuffer()
-        })
+      pending = fetchCachedArrayBuffer(assetUrl(src), {
+        cacheName: MEDIA_CACHE,
+        contentType: contentTypeFor(src),
+      })
         .then((data) => this.context.decodeAudioData(data))
         .catch((error: unknown) => {
           console.warn(`[audio] Missing or unreadable file "${src}"; continuing without it.`, error)
