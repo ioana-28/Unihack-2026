@@ -21,11 +21,10 @@
       "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
       "actiuni": [
         {
-          "tip": "privire_fereastra",
-          "cadre": [
-            { "imagine": "media/img/img_piata_doarsoldati_19.jpg", "secunde": 10 }
-          ],
-          "sunet": { "src": "media/audio/ambient/vant.mp3", "volum": 0.3 }
+          "tip": "ziua19_fereastra",
+          "imagine": "media/img/img_piata_doarsoldati_19.jpg",
+          "secunde": 10,
+          "subtitrare": "Văd soldați."
         }
       ]
     },

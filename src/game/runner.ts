@@ -81,6 +81,7 @@ export class DayRunner {
       audio: deps.audio,
       overlay: deps.overlay,
       room: deps.room,
+      fx: deps.fx,
     })
   }
 

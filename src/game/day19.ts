@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { getState, STATES } from '../scene/states'
 import type { GameAudio, PlayOptions, Playback } from './audio'
 import type { Overlay } from './overlay'
+import type { RoomFx } from './room-fx'
 
 // Day 19 extension: passive TV static (the TV is on all day but inactive) and
 // the Serbian radio bed with static/dropouts. It plugs into DayRunner through
@@ -15,11 +16,15 @@ const STATIC_VOLUME = 0.05
 const PREFIX = 'ziua19_'
 const FACING = new THREE.Vector3(0, 0, 1)
 const UP = new THREE.Vector3(0, 1, 0)
+// Pan the wide square photo so the window opening frames the soldiers at the
+// bottom-left of img_piata_doarsoldati_19 instead of the empty centre.
+const WINDOW_OFFSET = new THREE.Vector2(-0.26, -0.32)
 
 export type Day19Deps = {
   audio: GameAudio
   overlay: Overlay
   room: THREE.Object3D
+  fx: RoomFx
 }
 
 export type Day19Extension = {
@@ -61,7 +66,7 @@ function bounds(object: THREE.Object3D, space: THREE.Object3D): THREE.Box3 {
 }
 
 export function createDay19Extension(deps: Day19Deps): Day19Extension {
-  const { audio, overlay, room } = deps
+  const { audio, overlay, room, fx } = deps
 
   let generation = 0
   let tvStatic: TvStatic | null = null
@@ -249,6 +254,44 @@ export function createDay19Extension(deps: Day19Deps): Day19Extension {
     tvStatic = null
   }
 
+  const applyWindowOffset = (): void => {
+    const view = room.getObjectByName('ecran_fereastra')
+    if (!(view instanceof THREE.Mesh)) return
+    const material = view.material
+    if (!(material instanceof THREE.MeshBasicMaterial) || !material.map) return
+    material.map.offset.set(WINDOW_OFFSET.x, WINDOW_OFFSET.y)
+  }
+
+  const runWindow = async (action: Day19Action, gen: number): Promise<void> => {
+    const image = asString(action.imagine) ?? 'media/img/img_piata_doarsoldati_19.jpg'
+    const seconds = typeof action.secunde === 'number' ? action.secunde : 10
+    const subtitle = asString(action.subtitrare)
+    const windowNode = nodeFor('window')
+    fx.preloadWindow([image])
+    const wind = windowNode
+      ? play('media/audio/ambient/vant.mp3', {
+          at: windowNode,
+          loop: true,
+          volume: 0.3,
+        })
+      : null
+    try {
+      await fx.setWindowView(image, { bright: true })
+      if (!alive(gen)) return
+      applyWindowOffset()
+      if (subtitle) {
+        overlay.hint.hide()
+        overlay.subtitle.show(subtitle, Math.min(seconds, 5))
+      }
+      await wait(seconds)
+    } finally {
+      wind?.stop()
+    }
+    if (!alive(gen)) return
+    overlay.subtitle.hide()
+    fx.setWindowBright(false)
+  }
+
   const runRadio = async (action: Day19Action, gen: number): Promise<void> => {
     const src = asString(action.src)
     if (!src) return
@@ -300,6 +343,8 @@ export function createDay19Extension(deps: Day19Deps): Day19Extension {
         case 'ziua19_tv_static':
           setupTvStatic()
           return
+        case 'ziua19_fereastra':
+          return await runWindow(a, gen)
         case 'ziua19_radio':
           return await runRadio(a, gen)
         default:
