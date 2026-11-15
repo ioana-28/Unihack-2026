@@ -1,6 +1,5 @@
 import './lobby/lobby.css'
 import { App } from './app'
-import { gameState } from './game/state'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
@@ -14,7 +13,6 @@ let lobby: Lobby | null = null
 const app = new App(canvas, (mode) => {
   lobby?.setMode(mode)
 })
-Object.assign(window, { __app: app, __game: gameState })
 
 const secureContext = window.isSecureContext
 const xrPresent = hasXR()

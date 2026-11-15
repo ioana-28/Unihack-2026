@@ -14,9 +14,7 @@ import type { RoomFx } from './room-fx'
 const MISSING_VOICE_SECONDS = 4
 const POSITIONAL_VOICE_VOLUME = 1.6
 const CLOSEUP_FADE = 0.3
-const PEEPHOLE_DISTANCE = 0.85
-const PEEPHOLE_RADIUS = 0.44
-const PEEPHOLE_RING = 0.49
+const PEEPHOLE_DISTANCE = 1.2
 const CHANT_LOUD = 0.35
 const CHANT_QUIET = 0.1
 const CROWD_VOLUME = 0.3
@@ -340,27 +338,6 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     fx.setLighting('seara')
   }
 
-  const makePeepholeFallback = (): THREE.CanvasTexture | null => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 256
-    canvas.height = 256
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
-    const shade = ctx.createRadialGradient(128, 110, 8, 128, 128, 128)
-    shade.addColorStop(0, '#3a362e')
-    shade.addColorStop(0.5, '#181715')
-    shade.addColorStop(1, '#050505')
-    ctx.fillStyle = shade
-    ctx.fillRect(0, 0, 256, 256)
-    ctx.fillStyle = 'rgba(255, 214, 150, 0.12)'
-    ctx.fillRect(20, 36, 18, 184)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
-    ctx.fillRect(164, 0, 38, 256)
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.colorSpace = THREE.SRGBColorSpace
-    return texture
-  }
-
   const closePeephole = (): void => {
     const current = peephole
     peephole = null
@@ -369,77 +346,74 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
 
   const openPeephole = (src: string | null): void => {
     closePeephole()
-    const parent = camera.parent ?? camera
-    const group = new THREE.Group()
-    group.name = 'ziua16_vizor'
-    parent.add(group)
-    group.position.copy(camera.position)
-    group.quaternion.copy(camera.quaternion)
-    group.translateZ(-PEEPHOLE_DISTANCE)
-
-    const backdropGeometry = new THREE.PlaneGeometry(1.8, 1.8)
-    const backdropMaterial = new THREE.MeshBasicMaterial({
-      color: 0x050505,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-      fog: false,
-      side: THREE.DoubleSide,
-    })
-    const backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial)
-    backdrop.renderOrder = 38
-    group.add(backdrop)
-
-    const fallback = makePeepholeFallback()
-    const circleGeometry = new THREE.CircleGeometry(PEEPHOLE_RADIUS, 64)
-    const circleMaterial = new THREE.MeshBasicMaterial({
-      map: fallback,
-      color: fallback ? 0xffffff : 0x0a0a0a,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-      fog: false,
-      side: THREE.DoubleSide,
-    })
-    const circle = new THREE.Mesh(circleGeometry, circleMaterial)
-    circle.renderOrder = 39
-    group.add(circle)
-
-    const ringGeometry = new THREE.RingGeometry(PEEPHOLE_RADIUS, PEEPHOLE_RING, 64)
-    const ringMaterial = new THREE.MeshBasicMaterial({
-      color: 0x1b1a18,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-      fog: false,
-      side: THREE.DoubleSide,
-    })
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial)
-    ring.renderOrder = 40
-    group.add(ring)
+    const wasVisible = room.visible
+    room.visible = false
 
     const video = document.createElement('video')
     Object.assign(video, { muted: true, loop: true, playsInline: true, preload: 'auto' })
     video.setAttribute('playsinline', '')
+
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      fog: false,
+    })
+    const geometry = new THREE.PlaneGeometry(1, 1)
+    const screen = new THREE.Mesh(geometry, material)
+    screen.name = 'ziua16_vizor'
+    screen.position.set(0, 0, -PEEPHOLE_DISTANCE)
+    screen.renderOrder = 45
+    camera.add(screen)
+
+    const layout = (): void => {
+      const perspective = camera instanceof THREE.PerspectiveCamera ? camera : null
+      const fov = perspective?.fov ?? 62
+      const aspect = perspective?.aspect ?? 16 / 9
+      const viewHeight = 2 * PEEPHOLE_DISTANCE * Math.tan(THREE.MathUtils.degToRad(fov * 0.5))
+      const viewWidth = viewHeight * aspect
+      const videoAspect =
+        video.videoWidth > 0 && video.videoHeight > 0
+          ? video.videoWidth / video.videoHeight
+          : 16 / 9
+      let width = viewWidth
+      let height = width / videoAspect
+      if (height > viewHeight) {
+        height = viewHeight
+        width = height * videoAspect
+      }
+      screen.scale.set(width, height, 1)
+    }
+    layout()
+
     let videoTexture: THREE.VideoTexture | null = null
     let closed = false
 
+    video.addEventListener('loadedmetadata', () => {
+      if (!closed) layout()
+    })
     video.addEventListener(
       'loadeddata',
       () => {
         if (closed) return
         videoTexture = new THREE.VideoTexture(video)
         videoTexture.colorSpace = THREE.SRGBColorSpace
-        circleMaterial.map = videoTexture
-        circleMaterial.color.setHex(0xffffff)
-        circleMaterial.needsUpdate = true
+        videoTexture.minFilter = THREE.LinearFilter
+        videoTexture.magFilter = THREE.LinearFilter
+        videoTexture.generateMipmaps = false
+        material.map = videoTexture
+        material.color.setHex(0xffffff)
+        material.needsUpdate = true
+        layout()
         void video.play().catch(() => undefined)
       },
       { once: true },
     )
     video.addEventListener(
       'error',
-      () => console.warn('[day16] Peephole video missing; using the dark fallback.'),
+      () => console.warn('[day16] Peephole video missing; showing a black screen.'),
       { once: true },
     )
     if (src) {
@@ -450,18 +424,14 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     const close = (): void => {
       if (closed) return
       closed = true
-      group.parent?.remove(group)
+      screen.parent?.remove(screen)
       video.pause()
       video.removeAttribute('src')
       video.load()
       videoTexture?.dispose()
-      fallback?.dispose()
-      backdropGeometry.dispose()
-      backdropMaterial.dispose()
-      circleGeometry.dispose()
-      circleMaterial.dispose()
-      ringGeometry.dispose()
-      ringMaterial.dispose()
+      geometry.dispose()
+      material.dispose()
+      room.visible = wasVisible
     }
 
     peephole = { close }
