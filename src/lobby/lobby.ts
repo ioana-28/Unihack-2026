@@ -42,8 +42,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
   const enterLabel = requireElement<HTMLElement>('#enter .btn__label')
   const enterHint = requireElement<HTMLElement>('#enter-hint')
   const desktop = requireElement<HTMLButtonElement>('#desktop')
-  const day16 = requireElement<HTMLButtonElement>('#day16')
-  const day19 = requireElement<HTMLButtonElement>('#day19')
+  const dayButtons = [...document.querySelectorAll<HTMLButtonElement>('#days [data-day]')]
   const howtoToggle = requireElement<HTMLButtonElement>('#howto-toggle')
   const howto = requireElement<HTMLElement>('#howto')
   const exit = requireElement<HTMLButtonElement>('#exit')
@@ -82,8 +81,9 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
   })
 
   desktop.addEventListener('click', handlers.onDesktop)
-  day16.addEventListener('click', () => handlers.onJumpDay(16))
-  day19.addEventListener('click', () => handlers.onJumpDay(19))
+  for (const button of dayButtons) {
+    button.addEventListener('click', () => handlers.onJumpDay(Number(button.dataset.day)))
+  }
   exit.addEventListener('click', handlers.onExit)
 
   toastActionButton.addEventListener('click', () => {

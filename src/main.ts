@@ -1,7 +1,6 @@
 import './lobby/lobby.css'
 import { App } from './app'
 import { installLogPanel, installLogRelay } from './debug/logs'
-import { mountDay18Selector } from './game/day18-selector'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
@@ -32,14 +31,19 @@ const vrStatus = vrAvailable
       : 'WebXR fără immersive-vr'
 
 lobby = mountLobby({
+  // "Începe jocul": the whole game from day 15 (VR when available, otherwise desktop).
   onEnter: () => {
     if (!app.isRoomReady()) {
       lobby?.toast('Apartamentul se incarca inca. Incearca din nou in cateva secunde.')
       return
     }
+    if (!vrAvailable) {
+      app.enterDesktop(15)
+      return
+    }
     lobby?.setBusy(true)
     void app
-      .enterVR()
+      .enterVR(15)
       .then(() => lobby?.setBusy(false))
       .catch((error: unknown) => {
         lobby?.setBusy(false)
@@ -59,13 +63,14 @@ lobby = mountLobby({
       lobby?.toast('Apartamentul se incarca inca. Incearca din nou in cateva secunde.')
       return
     }
+    // A day button plays only that day.
     if (!vrAvailable) {
-      app.enterDesktop(day)
+      app.enterDesktop(day, true)
       return
     }
     lobby?.setBusy(true)
     void app
-      .enterVR(day)
+      .enterVR(day, true)
       .then(() => lobby?.setBusy(false))
       .catch((error: unknown) => {
         lobby?.setBusy(false)
@@ -74,21 +79,11 @@ lobby = mountLobby({
   },
 })
 
-const requestedDay = Number(params.get('zi') ?? params.get('day'))
-const initialDay =
-  Number.isInteger(requestedDay) && requestedDay >= 15 && requestedDay <= 22 ? requestedDay : 15
-
-mountDay18Selector({
-  initialDay,
-  onChange: (selection) =>
-    app.setStartSelection(selection.day, selection.filmAscuns, selection.aDatNumele),
-})
-
 lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)
 
 const entryState: EntryState = {
   target: 'vr',
-  label: 'Intra in VR',
+  label: 'Începe jocul',
   hint: vrAvailable
     ? 'WebXR. Asezat, cu telefonul in casca.'
     : 'WebXR necesita HTTPS si un browser compatibil.',
