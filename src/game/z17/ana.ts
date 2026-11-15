@@ -19,23 +19,21 @@ export type AnaOptions = {
 const MIC_TIMEOUT_MS = 8000
 const CONNECT_TIMEOUT_MS = 15000
 const EARLY_FAILURE_MS = 5000
-const AGENT_GAIN = 2
+const AGENT_GAIN = 1
 
 type Session = Awaited<ReturnType<typeof Conversation.startSession>>
 
 /**
- * The SDK clamps its public setVolume() to 1; reach for the output gain
- * so Ana can be twice as loud as the default.
+ * The output is an HTMLMediaElement, whose volume rejects anything above 1.
+ * Use the SDK's clamped setter and never let a gain change kill the session.
  */
 function setAgentGain(session: Session, gain: number): void {
-  const output = (session as unknown as { output?: { setVolume?: (value: number) => void } }).output
-  if (output?.setVolume) {
-    output.setVolume(gain)
-    console.info('[ana] output gain', gain)
-    return
+  try {
+    session.setVolume({ volume: Math.min(1, Math.max(0, gain)) })
+    console.info('[ana] output gain', Math.min(1, gain))
+  } catch (error) {
+    console.warn('[ana] could not set output volume:', error)
   }
-  session.setVolume({ volume: Math.min(1, gain) })
-  console.info('[ana] output gain', Math.min(1, gain))
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
