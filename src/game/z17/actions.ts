@@ -556,6 +556,7 @@ registerAction('televizor_17', (a, ctx) => {
     .addScaledVector(normal, depth / 2 + 0.006)
   screen.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
   screen.raycast = () => undefined
+  screen.visible = false
   ctx.deps.room.add(screen)
 
   const state: TvState = { on: true }
@@ -572,6 +573,7 @@ registerAction('televizor_17', (a, ctx) => {
   const setHover = (on: boolean): void => {
     if (on === hovering) return
     hovering = on
+    screen.visible = state.on && on
     if (on && image) {
       screen.material.map = image
       screen.material.needsUpdate = true
@@ -587,7 +589,6 @@ registerAction('televizor_17', (a, ctx) => {
   }
 
   const stopFrame = ctx.onFrame((_time, delta) => {
-    screen.visible = state.on
     if (!state.on) {
       setHover(false)
       return

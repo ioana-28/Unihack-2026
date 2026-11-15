@@ -19,6 +19,24 @@ export type AnaOptions = {
 const MIC_TIMEOUT_MS = 8000
 const CONNECT_TIMEOUT_MS = 15000
 const EARLY_FAILURE_MS = 5000
+const AGENT_GAIN = 2
+
+type Session = Awaited<ReturnType<typeof Conversation.startSession>>
+
+/**
+ * The SDK clamps its public setVolume() to 1; reach for the output gain
+ * so Ana can be twice as loud as the default.
+ */
+function setAgentGain(session: Session, gain: number): void {
+  const output = (session as unknown as { output?: { setVolume?: (value: number) => void } }).output
+  if (output?.setVolume) {
+    output.setVolume(gain)
+    console.info('[ana] output gain', gain)
+    return
+  }
+  session.setVolume({ volume: Math.min(1, gain) })
+  console.info('[ana] output gain', Math.min(1, gain))
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -199,7 +217,6 @@ export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<v
     agent?: { prompt?: { prompt?: string }; firstMessage?: string; language?: 'ro' }
   }
   type Attempt = { label: string; overrides: Overrides | null }
-  type Session = Awaited<ReturnType<typeof Conversation.startSession>>
 
   let conversation: Session | null = null
   let removeMic: (() => void) | null = null
@@ -288,7 +305,7 @@ export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<v
       }
       console.info(`[ana] session live (${attempt.label})`)
       // A_ACTIV
-      session.setVolume({ volume: 1 })
+      setAgentGain(session, AGENT_GAIN)
       player = playerLine(ctx)
       removeMic = micIcon(ctx)
       maxTimer = window.setTimeout(

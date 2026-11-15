@@ -11,7 +11,6 @@
     { "src": "media/audio/ambient/frigider.mp3", "la": "frigider", "volum": 0.08 }
   ],
   "start": [
-    { "tip": "ziua16_tv_static" },
     { "tip": "titlu", "text": "Sâmbătă, 16 decembrie 1989", "secunde": 3 }
   ],
   "pasi": [

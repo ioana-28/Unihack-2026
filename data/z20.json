@@ -10,7 +10,6 @@
   ],
   "start": [
     { "tip": "titlu", "text": "Miercuri, 20 decembrie 1989", "secunde": 3 },
-    { "tip": "televizor_17" },
     {
       "tip": "multime_crescatoare",
       "src": "media/audio/ambient/multime_z20.mp3",

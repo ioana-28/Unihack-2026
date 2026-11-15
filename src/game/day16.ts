@@ -186,13 +186,13 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     overlay.subtitle.hide()
   }
 
-  const voice = async (line: VoiceLine, gen: number): Promise<void> => {
+  const voice = async (line: VoiceLine, gen: number, gain = 1): Promise<void> => {
     if (!alive(gen)) return
     const at = line.la ? nodeFor(line.la) : null
     const sound = play(line.src, {
       at,
       filter: line.filtru ?? undefined,
-      volume: at ? POSITIONAL_VOICE_VOLUME : 1,
+      volume: (at ? POSITIONAL_VOICE_VOLUME : 1) * gain,
     })
     const buffer = await sound.ready
     if (!alive(gen)) {
@@ -210,10 +210,10 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     sound.stop()
   }
 
-  const playLines = async (lines: VoiceLine[], gen: number): Promise<void> => {
+  const playLines = async (lines: VoiceLine[], gen: number, gain = 1): Promise<void> => {
     for (const line of lines) {
       if (!alive(gen)) return
-      await voice(line, gen)
+      await voice(line, gen, gain)
     }
   }
 
@@ -471,7 +471,7 @@ export function createDay16Extension(deps: Day16Deps): Day16Extension {
     if (!alive(gen)) return
     openPeephole(asString(action.video))
     await overlay.fade(0, CLOSEUP_FADE)
-    await playLines(lines, gen)
+    await playLines(lines, gen, 2)
     if (!alive(gen)) return
     await overlay.fade(1, CLOSEUP_FADE)
     closePeephole()

@@ -224,11 +224,13 @@ export class DayRunner {
     if (!this.running) return
     const delta = Math.min(0.1, Math.max(0, time - this.lastTime))
     this.lastTime = time
-    for (const callback of [...this.frameCallbacks]) callback(time, delta)
     const pulse = 0.05 + 0.1 * (0.5 + 0.5 * Math.sin(time * 2.6))
     for (const [id, node] of this.nodes) {
       this.deps.fx.setGlow(node, this.glows(id) ? pulse : 0)
     }
+    // Extension glows are applied after the day's own glow so they win for
+    // objects the runner also knows (e.g. the front door in day 17).
+    for (const callback of [...this.frameCallbacks]) callback(time, delta)
     this.updateHints()
   }
 
