@@ -250,6 +250,7 @@ export function loadLoopVideo(src: string): Promise<LoopVideo | null> {
       () => {
         const texture = new THREE.VideoTexture(video)
         texture.colorSpace = THREE.SRGBColorSpace
+        console.info(`[z17] Video ready: ${src}`)
         done({ video, texture })
       },
       { once: true },

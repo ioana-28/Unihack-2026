@@ -1,10 +1,14 @@
 import './lobby/lobby.css'
 import { App } from './app'
+import { installLogPanel, installLogRelay } from './debug/logs'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
 
 const params = new URLSearchParams(window.location.search)
+if (import.meta.env.DEV || params.has('logs')) installLogRelay()
+if (params.has('logs')) installLogPanel()
+
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')
 if (!canvas) throw new Error('Element not found: #stage')
 

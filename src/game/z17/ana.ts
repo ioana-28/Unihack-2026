@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { Conversation } from '@elevenlabs/client'
 import type { ActionContext } from '../runner'
-import { AGENT_ID } from './ana-config'
+import { AGENT_ID, PROMPT_BAZA, PROMPT_Z17 } from './ana-config'
 import { darkPeephole, loadLoopVideo, Peephole } from './shared'
 
 // Step 17.2 — live conversation with Doamna Ana through the peephole
@@ -18,6 +18,7 @@ export type AnaOptions = {
 
 const MIC_TIMEOUT_MS = 8000
 const CONNECT_TIMEOUT_MS = 15000
+const EARLY_FAILURE_MS = 5000
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -138,9 +139,21 @@ async function microphoneAllowed(): Promise<boolean> {
 
 export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<void> {
   const { overlay } = ctx.deps
+  console.info(
+    '[ana] start',
+    `agent=${AGENT_ID}`,
+    `opener=${options.primaReplica ? 'yes' : 'no'}`,
+    `listening=${options.asculta || 'none'}`,
+    `speaking=${options.vorbeste || 'none'}`,
+  )
   const peephole = new Peephole()
   const [asculta, vorbeste] = await ctx.check(
     Promise.all([loadLoopVideo(options.asculta), loadLoopVideo(options.vorbeste)]),
+  )
+  console.info(
+    '[ana] loop videos',
+    `listening=${asculta ? 'ready' : 'missing'}`,
+    `speaking=${vorbeste ? 'ready' : 'missing'}`,
   )
   const dark = darkPeephole()
   const listening = asculta?.texture ?? vorbeste?.texture ?? dark
@@ -168,6 +181,7 @@ export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<v
   const setMode = (mode: Mode): void => {
     window.clearTimeout(switchTimer)
     if (mode === shown) return
+    console.info('[ana] mode', mode)
     switchTimer = window.setTimeout(
       () => {
         shown = mode
@@ -181,15 +195,23 @@ export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<v
   peephole.open(ctx, listening)
   playClip('listening')
 
-  let conversation: Awaited<ReturnType<typeof Conversation.startSession>> | null = null
+  type Overrides = {
+    agent?: { prompt?: { prompt?: string }; firstMessage?: string; language?: 'ro' }
+  }
+  type Attempt = { label: string; overrides: Overrides | null }
+  type Session = Awaited<ReturnType<typeof Conversation.startSession>>
+
+  let conversation: Session | null = null
   let removeMic: (() => void) | null = null
   let player: ReturnType<typeof playerLine> | null = null
   let stopFrame: (() => void) | null = null
   let maxTimer = 0
-  const cleanup = (): void => {
+
+  const teardownAttempt = (): void => {
     window.clearTimeout(maxTimer)
-    window.clearTimeout(switchTimer)
+    maxTimer = 0
     stopFrame?.()
+    stopFrame = null
     removeMic?.()
     removeMic = null
     player?.remove()
@@ -197,82 +219,155 @@ export async function runAna(ctx: ActionContext, options: AnaOptions): Promise<v
     const session = conversation
     conversation = null
     if (session) void session.endSession().catch(() => undefined)
-    for (const loop of [asculta, vorbeste]) loop?.video.pause()
     overlay.subtitle.hide()
+  }
+
+  const cleanup = (): void => {
+    window.clearTimeout(switchTimer)
+    teardownAttempt()
+    for (const loop of [asculta, vorbeste]) loop?.video.pause()
     peephole.close()
   }
   ctx.onCleanup(cleanup)
 
+  /** One connection attempt: retry early failures, give up (fallback) on later ones. */
+  const runAttempt = async (attempt: Attempt): Promise<'ended' | 'retry' | 'failed'> => {
+    console.info(`[ana] connecting (${attempt.label})`)
+    const startedAt = performance.now()
+    let failed = false
+    let finish: () => void = () => undefined
+    const ended = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+
+    try {
+      const session = await ctx.check(
+        withTimeout(
+          Conversation.startSession({
+            agentId: AGENT_ID,
+            connectionType: 'webrtc',
+            ...(attempt.overrides ? { overrides: attempt.overrides } : {}),
+            onModeChange: ({ mode }) => setMode(mode === 'speaking' ? 'speaking' : 'listening'),
+            // Ana's line stays until it has been read or the next one replaces it.
+            onMessage: (message) => {
+              if (message.source !== 'ai') return
+              overlay.hint.hide()
+              overlay.subtitle.show(message.message, readingSeconds(message.message))
+            },
+            // The player's words: live while speaking (tentative), then the final text.
+            onIncomingEvent: (event: { type?: string; [key: string]: unknown }) => {
+              const payload =
+                event.type === 'tentative_user_transcript'
+                  ? event.tentative_user_transcription_event
+                  : event.type === 'user_transcript'
+                    ? event.user_transcription_event
+                    : null
+              const text = (payload as { user_transcript?: unknown } | null)?.user_transcript
+              if (typeof text === 'string') player?.show(text)
+            },
+            // A_SFARSIT: every exit path ends here.
+            onDisconnect: (details) => {
+              console.info('[ana] disconnected', JSON.stringify(details))
+              finish()
+            },
+            onError: (message) => {
+              console.warn('[ana] agent error:', message)
+              failed = true
+              finish()
+            },
+          }),
+          CONNECT_TIMEOUT_MS,
+          'agent connection',
+        ),
+      )
+
+      conversation = session
+      if (failed) {
+        teardownAttempt()
+        return 'retry'
+      }
+      console.info(`[ana] session live (${attempt.label})`)
+      // A_ACTIV
+      session.setVolume({ volume: 1 })
+      player = playerLine(ctx)
+      removeMic = micIcon(ctx)
+      maxTimer = window.setTimeout(
+        () => void conversation?.endSession().catch(() => finish()),
+        options.maxSecunde * 1000,
+      )
+      let away = 0
+      stopFrame = ctx.onFrame((_time, delta) => {
+        away = peephole.isLookedAt(ctx) ? 0 : away + delta
+        if (away >= options.privireInAfara) {
+          away = Number.NEGATIVE_INFINITY
+          void conversation?.endSession().catch(() => finish())
+        }
+      })
+      await ctx.check(ended)
+      const lasted = performance.now() - startedAt
+      teardownAttempt()
+      if (failed) {
+        console.warn(`[ana] session ended by an agent error after ${Math.round(lasted)}ms`)
+        return lasted < EARLY_FAILURE_MS ? 'retry' : 'failed'
+      }
+      console.info(`[ana] session ended after ${Math.round(lasted)}ms`)
+      return 'ended'
+    } catch (error) {
+      await ctx.check(Promise.resolve()) // rethrows when the day was stopped
+      console.warn(`[ana] connection failed (${attempt.label})`, error)
+      teardownAttempt()
+      return 'retry'
+    }
+  }
+
   let needFallback = !AGENT_ID
   try {
-    if (!needFallback) needFallback = !(await ctx.check(microphoneAllowed()))
+    if (needFallback) {
+      console.warn('[ana] no agent id; using the fallback line.')
+    } else {
+      const allowed = await ctx.check(microphoneAllowed())
+      console.info('[ana] microphone', allowed ? 'allowed' : 'denied')
+      needFallback = !allowed
+    }
 
     if (!needFallback) {
-      let finish: () => void = () => undefined
-      const ended = new Promise<void>((resolve) => {
-        finish = resolve
-      })
-      try {
-        conversation = await ctx.check(
-          withTimeout(
-            Conversation.startSession({
-              agentId: AGENT_ID,
-              connectionType: 'webrtc',
-              onModeChange: ({ mode }) => setMode(mode === 'speaking' ? 'speaking' : 'listening'),
-              // Ana's line stays until it has been read or the next one replaces it.
-              onMessage: (message) => {
-                if (message.source !== 'ai') return
-                overlay.hint.hide()
-                overlay.subtitle.show(message.message, readingSeconds(message.message))
-              },
-              // The player's words: live while speaking (tentative), then the final text.
-              onIncomingEvent: (event: { type?: string; [key: string]: unknown }) => {
-                const payload =
-                  event.type === 'tentative_user_transcript'
-                    ? event.tentative_user_transcription_event
-                    : event.type === 'user_transcript'
-                      ? event.user_transcription_event
-                      : null
-                const text = (payload as { user_transcript?: unknown } | null)?.user_transcript
-                if (typeof text === 'string') player?.show(text)
-              },
-              // A_SFARSIT: every exit path ends here.
-              onDisconnect: () => finish(),
-              onError: (message) => {
-                console.warn('[ana] Agent error; using the fallback line.', message)
-                needFallback = true
-                finish()
-              },
-            }),
-            CONNECT_TIMEOUT_MS,
-            'agent connection',
-          ),
-        )
-        // A_ACTIV
-        conversation.setVolume({ volume: 1 })
-        player = playerLine(ctx)
-        removeMic = micIcon(ctx)
-        maxTimer = window.setTimeout(() => void conversation?.endSession().catch(() => finish()), options.maxSecunde * 1000)
-        let away = 0
-        stopFrame = ctx.onFrame((_time, delta) => {
-          away = peephole.isLookedAt(ctx) ? 0 : away + delta
-          if (away >= options.privireInAfara) {
-            away = Number.NEGATIVE_INFINITY
-            void conversation?.endSession().catch(() => finish())
-          }
+      // Overrides must be enabled on the agent in the ElevenLabs dashboard.
+      // When they are not, fall back to a plain session so the scene still works.
+      const attempts: Attempt[] = [
+        {
+          label: 'day 17 prompt + opener',
+          overrides: {
+            agent: {
+              prompt: { prompt: `${PROMPT_BAZA}\n\n${PROMPT_Z17}` },
+              language: 'ro',
+              ...(options.primaReplica ? { firstMessage: options.primaReplica } : {}),
+            },
+          },
+        },
+      ]
+      if (options.primaReplica) {
+        attempts.push({
+          label: 'opener only',
+          overrides: { agent: { firstMessage: options.primaReplica } },
         })
-        await ctx.check(ended)
-      } catch (error) {
-        await ctx.check(Promise.resolve()) // rethrows if the day was stopped
-        console.warn('[ana] Could not start the conversation; using the fallback line.', error)
-        needFallback = true
       }
+      attempts.push({ label: 'agent defaults', overrides: null })
+
+      let live = false
+      for (const attempt of attempts) {
+        const result = await runAttempt(attempt)
+        if (result === 'ended') {
+          live = true
+          break
+        }
+        if (result === 'failed') break
+      }
+      needFallback = !live
     }
 
     if (needFallback) {
       // A_REZERVA
-      removeMic?.()
-      removeMic = null
+      console.warn('[ana] using the recorded fallback line.')
       window.clearTimeout(switchTimer)
       shown = 'speaking'
       playClip('speaking')
