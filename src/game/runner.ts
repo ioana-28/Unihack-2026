@@ -107,6 +107,8 @@ export function registerAction(tip: string, handler: ActionHandler): void {
 export class DayRunner {
   private readonly deps: RunnerDeps
   private day: ZiData | null = null
+  /** Started from a day button: the calendar ends the game instead of loading the next day. */
+  private singleDay = false
   private generation = 0
   private running = false
   private scene = false
@@ -199,6 +201,11 @@ export class DayRunner {
   // ---------- Lifecycle
 
   /** Starts a day from its data file; returns false if the file does not exist. */
+  /** true = play only the day that is started next (day buttons on the start screen). */
+  setSingleDay(on: boolean): void {
+    this.singleDay = on
+  }
+
   async start(zi: number): Promise<boolean> {
     this.stop()
     const gen = this.generation
@@ -502,6 +509,14 @@ export class DayRunner {
   private async nextDay(missingText: string, seconds: number, gen: number): Promise<void> {
     const { overlay } = this.deps
     const current = this.day?.zi ?? 15
+    if (this.singleDay) {
+      // Only this day was chosen: end here and go back to the start screen.
+      await this.check(overlay.fade(1, 0.3), gen)
+      overlay.title.show(`Sfârșitul zilei ${current}.`, seconds)
+      await this.wait(seconds, gen)
+      this.deps.onFinished()
+      return
+    }
     let zi = current + 1
     let next = null
     while (zi <= 22) {

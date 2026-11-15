@@ -10,7 +10,7 @@
     "tunnel": "cloudflared tunnel --url http://localhost:5173",
     "tunnel:preview": "cloudflared tunnel --url http://localhost:4173",
     "reverse:preview": "adb reverse tcp:4173 tcp:4173",
-    "reverse:dev": "C:/Users/Ioana/Downloads/platform-tools-latest-windows/platform-tools/adb reverse tcp:5173 tcp:5173",
+    "reverse:dev": "adb reverse tcp:5173 tcp:5173",
     "model:ktx2": "node scripts/ktx2-model.mjs",
     "tailscale:login": "node scripts/tailscale.mjs up",
     "tailscale:serve": "node scripts/tailscale.mjs serve --bg 5173",
