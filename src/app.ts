@@ -6,6 +6,8 @@ import { GameAudio } from './game/audio'
 import { Overlay } from './game/overlay'
 import { RoomFx } from './game/room-fx'
 import { DayRunner } from './game/runner'
+import { resetGame } from './game/state'
+import './game/z17'
 import { DesktopControls } from './input/desktop'
 import type { Mode } from './mode'
 import { createHintPanel } from './scene/hint'
@@ -28,6 +30,14 @@ const CARDBOARD_HUD_DISTANCE = 10
 const WEBXR_HUD_DISTANCE = 50
 const RETICLE_REFERENCE = 1.1
 const HINT_REFERENCE = 1.2
+
+/** Demo jump: `?zi=17` starts that day with default variables; otherwise day 15. */
+function startDay(): number {
+  const zi = Number(new URLSearchParams(window.location.search).get('zi'))
+  if (!Number.isInteger(zi) || zi < 15 || zi > 22) return 15
+  resetGame()
+  return zi
+}
 
 function requestOrientationPermission(): Promise<void> {
   const constructor = window.DeviceOrientationEvent as unknown as {
@@ -176,7 +186,7 @@ export class App {
     this.interaction.setMode('desktop')
     this.interaction.setEnabled(true)
     this.setMode('desktop')
-    void this.runner.start(15)
+    void this.runner.start(startDay())
   }
 
   /** Leaves the game (desktop or VR) and shows the start screen. */
@@ -413,7 +423,7 @@ export class App {
     this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
     this.interaction.setEnabled(true)
     this.showHint()
-    void this.runner.start(15)
+    void this.runner.start(startDay())
   }
 
   private setHudDistance(distance: number): void {

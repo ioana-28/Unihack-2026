@@ -27,7 +27,7 @@
         {
           "tip": "voce",
           "src": "media/audio/voce/radu_replica2.mp3",
-          "subtitrare": "Dacă aude cineva… să audă."
+          "subtitrare": "Dacă aude cineva, s-audă. Totuși, pereții au urechi și vecinii la fel."
         }
       ],
       "pauza_dupa": 2
@@ -55,7 +55,7 @@
           "src": "media/audio/voce/ioana_z15_b.mp3",
           "la": "telefon",
           "filtru": "telefon",
-          "subtitrare": "Of, iar începi. Te sun mâine. Pa!"
+          "subtitrare": "Iar începi. Te sun mâine. Pa!"
         }
       ],
       "pauza_dupa": 1
@@ -68,7 +68,7 @@
         {
           "tip": "voce",
           "src": "media/audio/voce/radu_replica4.mp3",
-          "subtitrare": "Iar s-a luat curentul. Măcar e liniște."
+          "subtitrare": "Iar s-a luat curentul. Măcar e liniște. Voi citi la lumânare, ca de obicei."
         }
       ]
     },
@@ -80,8 +80,8 @@
         {
           "tip": "privire_fereastra",
           "cadre": [
-            { "imagine": "media/img/img_piata_bezna.jpg", "video": "media/video/video_piata_bezna.mp4", "secunde": 3 },
-            { "imagine": "media/img/img_piata_noapte.jpg", "video": "media/video/video_piata_noapte.mp4", "secunde": 3 }
+            { "imagine": "media/img/img_piata_bezna.jpg", "video": "media/video/video_piata_bezna.mp4", "secunde": 5 },
+            { "imagine": "media/img/img_piata_noapte.jpg", "video": "media/video/video_piata_noapte.mp4", "secunde": 5 }
           ],
           "sunet": { "src": "media/audio/ambient/vant.mp3", "volum": 0.35 },
           "la_iesire": [
@@ -134,8 +134,7 @@
       {
         "tip": "voce",
         "src": "media/audio/voce/radu_replica5.mp3",
-        "subtitrare": null,
-        "_nota": "Transcrierea replicii 5 lipsește din documente; completați subtitrarea aici."
+        "subtitrare": "15 decembrie. Încă o zi. Ioana iar vorbește prea tare la telefon. Zice că se întâmplă ceva la Piața Maria."
       },
       { "tip": "zi_urmatoare", "lipsa_text": "Sfârșitul zilei 15 — continuare în curând", "secunde": 4 }
     ]
