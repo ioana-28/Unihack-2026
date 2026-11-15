@@ -85,6 +85,7 @@ export class App {
   private compiled = false
   private xrCompiled = false
   private startDayNumber = 15
+  private vrCountdown = 0
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
@@ -348,8 +349,8 @@ export class App {
       this.interaction.reset()
       this.interaction.setMode('vr')
       this.interaction.setEnabled(false)
-      this.prologue.start()
       this.setMode('vr')
+      this.startVrCountdown(10, () => this.prologue.start())
 
       if (!this.xrCompiled) {
         this.xrCompiled = true
@@ -420,6 +421,8 @@ export class App {
   }
 
   private readonly handleSessionEnd = (): void => {
+    this.clearVrCountdown()
+    this.overlay.title.hide()
     this.runner.stop()
     this.newspaper.close()
     this.interaction.setEnabled(false)
@@ -438,6 +441,7 @@ export class App {
 
   dispose(): void {
     window.removeEventListener('resize', this.handleResize)
+    this.clearVrCountdown()
     window.removeEventListener('orientationchange', this.handleResize)
     window.visualViewport?.removeEventListener('resize', this.handleResize)
     window.removeEventListener('keydown', this.handleKeyDown)
@@ -494,6 +498,32 @@ export class App {
     this.interaction.setEnabled(true)
     this.showHint()
     void this.runner.start(this.startDayNumber)
+  }
+
+  /** Head-locked countdown so the player can settle into the headset. */
+  private startVrCountdown(seconds: number, done: () => void): void {
+    this.clearVrCountdown()
+    let remaining = seconds
+    const show = (): void => {
+      this.overlay.title.show(`Începem în ${remaining}`, 1.2)
+    }
+    show()
+    this.vrCountdown = window.setInterval(() => {
+      remaining -= 1
+      if (remaining <= 0) {
+        this.clearVrCountdown()
+        this.overlay.title.hide()
+        if (this.mode === 'vr') done()
+        return
+      }
+      show()
+    }, 1000)
+  }
+
+  private clearVrCountdown(): void {
+    if (this.vrCountdown === 0) return
+    window.clearInterval(this.vrCountdown)
+    this.vrCountdown = 0
   }
 
   private setHudDistance(distance: number): void {
