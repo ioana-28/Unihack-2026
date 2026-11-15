@@ -6,6 +6,7 @@ export type ObiectId =
   | 'radio'
   | 'telefon'
   | 'fereastra'
+  | 'usa'
   | 'ziar'
   | 'calendar'
   | 'frigider'

@@ -20,6 +20,7 @@ export type LobbyHandlers = {
   onEnter: () => void
   onDesktop: () => void
   onExit: () => void
+  onJumpDay: (day: number) => void
 }
 
 export type Lobby = {
@@ -41,6 +42,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
   const enterLabel = requireElement<HTMLElement>('#enter .btn__label')
   const enterHint = requireElement<HTMLElement>('#enter-hint')
   const desktop = requireElement<HTMLButtonElement>('#desktop')
+  const day16 = requireElement<HTMLButtonElement>('#day16')
   const howtoToggle = requireElement<HTMLButtonElement>('#howto-toggle')
   const howto = requireElement<HTMLElement>('#howto')
   const exit = requireElement<HTMLButtonElement>('#exit')
@@ -79,6 +81,7 @@ export function mountLobby(handlers: LobbyHandlers): Lobby {
   })
 
   desktop.addEventListener('click', handlers.onDesktop)
+  day16.addEventListener('click', () => handlers.onJumpDay(16))
   exit.addEventListener('click', handlers.onExit)
 
   toastActionButton.addEventListener('click', () => {

@@ -72,6 +72,7 @@ export class App {
   private mono = true
   private compiled = false
   private xrCompiled = false
+  private startDayNumber = 15
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
@@ -167,6 +168,7 @@ export class App {
       moveTo: (id) => this.interaction.moveTo(id),
       moveToPoint: (point) => this.interaction.moveToPoint(point),
       onFinished: () => this.returnToStart(),
+      isXR: () => this.renderer.xr.isPresenting,
     })
     this.setHudDistance(CARDBOARD_HUD_DISTANCE)
 
@@ -180,7 +182,7 @@ export class App {
     this.renderer.setAnimationLoop(this.frame)
   }
 
-  enterDesktop(): void {
+  enterDesktop(day = 15): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
     this.audio.resume()
@@ -194,7 +196,8 @@ export class App {
     this.interaction.setMode('desktop')
     this.interaction.setEnabled(true)
     this.setMode('desktop')
-    void this.runner.start(15)
+    this.startDayNumber = day
+    void this.runner.start(day)
   }
 
   /** Leaves the game (desktop or VR) and shows the start screen. */
@@ -301,10 +304,11 @@ export class App {
     this.debug.activate()
   }
 
-  async enterVR(): Promise<void> {
+  async enterVR(day = 15): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
     this.audio.resume()
+    this.startDayNumber = day
     this.controls.setEnabled(false)
     this.orientation.setEnabled(false)
     try {
@@ -477,7 +481,7 @@ export class App {
     this.interaction.setMode(this.mode === 'vr' ? 'vr' : 'desktop')
     this.interaction.setEnabled(true)
     this.showHint()
-    void this.runner.start(15)
+    void this.runner.start(this.startDayNumber)
   }
 
   private setHudDistance(distance: number): void {

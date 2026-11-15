@@ -1,0 +1,129 @@
+{
+  "zi": 16,
+  "data": "Sâmbătă, 16 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_cativaoameni.jpg",
+  "optionale": ["radio"],
+  "ambient": [
+    { "src": "media/audio/ambient/vant.mp3", "la": "fereastra", "volum": 0.06 },
+    { "src": "media/audio/ambient/ceas.mp3", "volum": 0.1 },
+    { "src": "media/audio/ambient/frigider.mp3", "la": "frigider", "volum": 0.08 }
+  ],
+  "start": [
+    { "tip": "ziua16_tv_static" },
+    { "tip": "titlu", "text": "Sâmbătă, 16 decembrie 1989", "secunde": 3 }
+  ],
+  "pasi": [
+    {
+      "id": "16.0",
+      "actiuni": [{ "tip": "asteapta", "secunde": 3 }]
+    },
+    {
+      "id": "16.1",
+      "obiect": "usa",
+      "suna": { "src": "media/audio/sfx/sonerie.mp3", "volum": 0.8 },
+      "indiciu": { "text": "Cineva sună la ușă.", "dupa": 10 },
+      "actiuni": [
+        {
+          "tip": "ziua16_vizor",
+          "video": "media/video/ana_z16.mp4",
+          "replici": [
+            {
+              "src": "media/audio/voce/ana_z16.mp3",
+              "la": "entryDoor",
+              "subtitrare": "Radule, eu sunt, Ana. Am stat la coadă la ulei de la șase și n-am prins. Da' zice lumea că s-au strâns oameni mulți la popa ungur. Și Sorin al meu vrea să meargă să vadă, mânca-l-ar mama!"
+            },
+            {
+              "src": "media/audio/voce/radu_replica7.mp3",
+              "subtitrare": "Spuneți-i să stea acasă, doamna Ana."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "16.2",
+      "actiuni": [{ "tip": "ziua16_lumina_seara", "secunde": 5 }]
+    },
+    {
+      "id": "16.3",
+      "obiect": "telefon",
+      "suna": { "src": "media/audio/sfx/telefon_suna.mp3", "volum": 0.8 },
+      "indiciu": { "text": "Răspunde la telefon.", "dupa": 10 },
+      "actiuni": [
+        {
+          "tip": "ziua16_apel",
+          "replici": [
+            {
+              "src": "media/audio/voce/ioana_z16.mp3",
+              "la": "phone",
+              "filtru": "telefon",
+              "subtitrare": "Radule! Sunt aici! Toți sunt aici! Nu mai e doar pentru pastor, strigă împotriva lui!"
+            },
+            {
+              "src": "media/audio/voce/radu_replica8.mp3",
+              "subtitrare": "Ioana, du-te acasă. Acum!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "16.4",
+      "obiect": "fereastra",
+      "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "ziua16_fereastra",
+          "imagine": "media/img/img_piata_cativaoameni.jpg",
+          "video": "media/video/video_piata_cativaoameni.mp4",
+          "replici": [
+            {
+              "src": "media/audio/voce/radu_replica9.mp3",
+              "subtitrare": "Libertate…"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "16.5",
+      "indiciu": {
+        "text": "Radioul prinde și posturi străine.",
+        "dupa": 0,
+        "pana_la_flag": "radio_folosit"
+      }
+    }
+  ],
+  "obiecte": {
+    "radio": {
+      "actiuni": [
+        { "tip": "flag", "nume": "radio_folosit" },
+        {
+          "tip": "ziua16_radio",
+          "src": "media/audio/voce/radio_sarb_z16.mp3",
+          "subtitrare": "Agențiile de presă relatează că în orașul vecin Timișoara au loc demonstrații. Autoritățile române nu au făcut nicio declarație."
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": { "pasi": ["16.1", "16.3", "16.4"], "flaguri": [] },
+    "refuz": { "text": "Continuă să explorezi.", "secunde": 3 },
+    "actiuni": [
+      { "tip": "sunet", "src": "media/audio/sfx/hartie_rupta.mp3", "la": "calendar" },
+      { "tip": "fade", "spre": 1, "secunde": 1 },
+      {
+        "tip": "voce",
+        "src": "media/audio/voce/radu_replica6.mp3",
+        "subtitrare": "16 decembrie, mi-a fost frig."
+      },
+      {
+        "tip": "zi_urmatoare",
+        "lipsa_text": "Sfârșitul zilei 16 — continuare în curând",
+        "secunde": 4
+      }
+    ]
+  }
+}

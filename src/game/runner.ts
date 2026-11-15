@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { getState, STATES } from '../scene/states'
 import type { StateId, Vec3 } from '../scene/states'
 import type { GameAudio, Playback } from './audio'
+import { createDay16Extension } from './day16'
+import type { Day16Extension } from './day16'
 import { loadDay } from './days'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -23,6 +25,7 @@ const KEYS: Record<ObiectId, string> = {
   radio: 'radio',
   telefon: 'phone',
   fereastra: 'window',
+  usa: 'entryDoor',
   ziar: 'newspaper',
   calendar: 'calendar',
   frigider: 'fridge',
@@ -54,6 +57,8 @@ export type RunnerDeps = {
   moveToPoint: (point: Vec3) => void
   /** The game is over for now: go back to the start screen. */
   onFinished: () => void
+  /** True while an immersive XR session is presenting. */
+  isXR?: () => boolean
 }
 
 const now = (): number => performance.now() / 1000
@@ -71,9 +76,18 @@ export class DayRunner {
   private hints: Hint[] = []
   private ambient: { spec: Ambient; playback: Playback | null }[] = []
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
+  private readonly extra: Day16Extension
 
   constructor(deps: RunnerDeps) {
     this.deps = deps
+    this.extra = createDay16Extension({
+      audio: deps.audio,
+      overlay: deps.overlay,
+      fx: deps.fx,
+      camera: deps.camera,
+      room: deps.room,
+      isXR: deps.isXR,
+    })
   }
 
   // ---------- Hooks for the interaction controller
@@ -154,6 +168,7 @@ export class DayRunner {
     this.hints = []
     this.ambient = []
     this.deps.audio.stopAll()
+    this.extra.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
     this.deps.fx.reset()
@@ -329,6 +344,7 @@ export class DayRunner {
       case 'ecran_tv':
         return this.tvView(a, gen)
       default:
+        if (this.extra.handles(a)) return this.check(this.extra.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
     }
