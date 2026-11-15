@@ -6,7 +6,7 @@ import { GameAudio } from './game/audio'
 import { Overlay } from './game/overlay'
 import { RoomFx } from './game/room-fx'
 import { DayRunner } from './game/runner'
-import { resetGame } from './game/state'
+import { gameState, resetGame } from './game/state'
 import './game/z17'
 import './game/z20'
 import { DesktopControls } from './input/desktop'
@@ -89,6 +89,7 @@ export class App {
 
   constructor(canvas: HTMLCanvasElement, onModeChange: (mode: Mode) => void) {
     this.onModeChange = onModeChange
+    this.startDayNumber = startDay()
     void startMediaPreload()
 
     this.renderer = new THREE.WebGLRenderer({
@@ -195,7 +196,16 @@ export class App {
     this.renderer.setAnimationLoop(this.frame)
   }
 
-  enterDesktop(day = startDay()): void {
+  /** Selects the day (and its test variables) used by the next lobby entry. */
+  setStartSelection(day: number, filmAscuns: boolean, aDatNumele: boolean): void {
+    this.startDayNumber = day
+    gameState.film_ascuns = filmAscuns
+    gameState.a_dat_numele = aDatNumele
+    gameState.film_confiscat = false
+    gameState.decizie_z18 = null
+  }
+
+  enterDesktop(day = this.startDayNumber): void {
     if (this.mode !== 'lobby' || this.entering) return
     if (this.debug.isActive()) return
     this.audio.resume()
@@ -272,6 +282,9 @@ export class App {
 
   private handleObjectActivate(key: string): void {
     if (key !== 'newspaper') return
+    // Day 18 owns the newspaper close-up so it can show ziar_z18 and close on
+    // look-away. Other days keep the existing page-flip popup.
+    if (gameState.zi === 18) return
     if (this.mode !== 'desktop' && this.mode !== 'vr') return
     this.hint.object.visible = false
     this.interaction.setEnabled(false)
@@ -317,7 +330,7 @@ export class App {
     this.debug.activate()
   }
 
-  async enterVR(day = startDay()): Promise<void> {
+  async enterVR(day = this.startDayNumber): Promise<void> {
     if (this.mode !== 'lobby' || this.entering) return
     this.entering = true
     this.audio.resume()

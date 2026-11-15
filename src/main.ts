@@ -1,6 +1,7 @@
 import './lobby/lobby.css'
 import { App } from './app'
 import { installLogPanel, installLogRelay } from './debug/logs'
+import { mountDay18Selector } from './game/day18-selector'
 import { mountLobby } from './lobby/lobby'
 import type { EntryState, Lobby } from './lobby/lobby'
 import { hasXR, supportsImmersiveVR } from './xr/session'
@@ -71,6 +72,16 @@ lobby = mountLobby({
         lobby?.toast(vrFailureMessage(error))
       })
   },
+})
+
+const requestedDay = Number(params.get('zi') ?? params.get('day'))
+const initialDay =
+  Number.isInteger(requestedDay) && requestedDay >= 15 && requestedDay <= 22 ? requestedDay : 15
+
+mountDay18Selector({
+  initialDay,
+  onChange: (selection) =>
+    app.setStartSelection(selection.day, selection.filmAscuns, selection.aDatNumele),
 })
 
 lobby.setStatus(vrAvailable ? 'ok' : 'off', vrStatus)

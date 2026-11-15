@@ -1,0 +1,95 @@
+{
+  "zi": 18,
+  "data": "Luni, 18 decembrie 1989",
+  "lumina": "zi",
+  "pozitie": "livingCouch",
+  "fereastra": "media/img/img_piata_lumanari_18.jpg",
+  "optionale": ["ziar", "frigider"],
+  "ambient": [
+    { "src": "media/audio/ambient/vant.mp3", "la": "fereastra", "volum": 0.06 },
+    { "src": "media/audio/ambient/ceas.mp3", "volum": 0.1 }
+  ],
+  "start": [
+    { "tip": "titlu", "text": "Luni, 18 decembrie 1989", "secunde": 3 },
+    { "tip": "ziua18_start" }
+  ],
+  "pasi": [
+    {
+      "id": "18.0",
+      "obiect": "radio",
+      "indiciu": { "text": "Pornește radioul.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "ziua18_radio",
+          "src": "media/audio/voce/radio_europa_z18.mp3",
+          "subtitrare": "Agențiile occidentale relatează că forțele de ordine au deschis focul asupra demonstranților din Timișoara. Numărul victimelor nu poate fi confirmat."
+        }
+      ]
+    },
+    {
+      "id": "18.1",
+      "obiect": "fereastra",
+      "indiciu": { "text": "Uită-te pe fereastră.", "dupa": 0, "repeta": 20 },
+      "actiuni": [
+        {
+          "tip": "ziua18_fereastra",
+          "imagine": "media/img/img_piata_lumanari_18.jpg",
+          "secunde": 15
+        }
+      ],
+      "pauza_dupa": 3
+    },
+    {
+      "id": "18.2",
+      "obiect": "usa",
+      "suna": { "src": "media/audio/sfx/sonerie.mp3", "volum": 0.8 },
+      "indiciu": { "text": "Cineva sună la ușă.", "dupa": 10 },
+      "actiuni": [{ "tip": "ziua18_vizor" }]
+    },
+    {
+      "id": "18.3",
+      "actiuni": [{ "tip": "ziua18_choice" }]
+    },
+    {
+      "id": "18.4",
+      "actiuni": [{ "tip": "ziua18_reply" }]
+    },
+    {
+      "id": "18.5",
+      "indiciu": { "text": "Rupe fila din calendar ca să treacă ziua.", "dupa": 0 }
+    }
+  ],
+  "obiecte": {
+    "ziar": {
+      "actiuni": [
+        {
+          "tip": "ziua18_ziar",
+          "imagine": "media/img/ziar_z18.jpg"
+        }
+      ]
+    },
+    "frigider": {
+      "actiuni": [
+        {
+          "tip": "text",
+          "text": "Câteva picioare de pui, un borcan de zacuscă, salam cu soia. Carnea bună pleca la export.",
+          "secunde": 5
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "necesita": { "pasi": ["18.0", "18.1", "18.2", "18.3", "18.4"], "flaguri": [] },
+    "refuz": { "text": "Continuă să explorezi.", "secunde": 3 },
+    "actiuni": [
+      { "tip": "sunet", "src": "media/audio/sfx/hartie_rupta.mp3", "la": "calendar" },
+      { "tip": "fade", "spre": 1, "secunde": 1 },
+      { "tip": "ziua18_final" },
+      {
+        "tip": "zi_urmatoare",
+        "lipsa_text": "Sfârșitul zilei 18 — continuare în curând",
+        "secunde": 4
+      }
+    ]
+  }
+}

@@ -4,6 +4,8 @@ import type { StateId, Vec3 } from '../scene/states'
 import type { GameAudio, Playback } from './audio'
 import { createDay16Extension } from './day16'
 import type { Day16Extension } from './day16'
+import { createDay18Extension } from './day18'
+import type { Day18Extension } from './day18'
 import { loadDay } from './days'
 import type { Overlay } from './overlay'
 import type { RoomFx } from './room-fx'
@@ -114,6 +116,7 @@ export class DayRunner {
   private ambient: { spec: Ambient; playback: Playback | null }[] = []
   private readonly nodes = new Map<ObiectId, THREE.Object3D>()
   private readonly extra: Day16Extension
+  private readonly day18: Day18Extension
   private control: ExtensionControl | null = null
   private frameCallbacks = new Set<(time: number, delta: number) => void>()
   private cleanups: (() => void)[] = []
@@ -128,6 +131,13 @@ export class DayRunner {
       camera: deps.camera,
       room: deps.room,
       isXR: deps.isXR,
+    })
+    this.day18 = createDay18Extension({
+      audio: deps.audio,
+      overlay: deps.overlay,
+      fx: deps.fx,
+      camera: deps.camera,
+      room: deps.room,
     })
   }
 
@@ -212,6 +222,7 @@ export class DayRunner {
     this.ambient = []
     this.deps.audio.stopAll()
     this.extra.reset()
+    this.day18.reset()
     this.deps.overlay.clearText()
     this.deps.overlay.setBlack(false)
     this.control = null
@@ -399,6 +410,7 @@ export class DayRunner {
         const handler = extensionActions.get(String(action.tip))
         if (handler) return handler(action, this.context(gen))
         if (this.extra.handles(a)) return this.check(this.extra.run(a), gen)
+        if (this.day18.handles(a)) return this.check(this.day18.run(a), gen)
         // An action type this build does not know yet (e.g. from a newer day file).
         console.warn('[day] Unknown action, skipped:', a)
       }
@@ -478,9 +490,19 @@ export class DayRunner {
 
   private async nextDay(missingText: string, seconds: number, gen: number): Promise<void> {
     const { overlay } = this.deps
-    const zi = (this.day?.zi ?? 15) + 1
-    const next = await this.check(loadDay(zi), gen)
+    const current = this.day?.zi ?? 15
+    let zi = current + 1
+    let next = null
+    while (zi <= 22) {
+      next = await this.check(loadDay(zi), gen)
+      if (next) break
+      zi += 1
+    }
     if (next) {
+      // Skip days whose file does not exist yet, so the available days still flow.
+      if (zi !== current + 1) {
+        console.warn(`[day] Day ${current + 1} is missing; continuing with day ${zi}.`)
+      }
       void this.start(zi)
       return
     }

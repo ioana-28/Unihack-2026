@@ -1,7 +1,7 @@
 import { fetchCachedBlob, type LoadProgress } from './cache'
 import { assetUrl, loadAllDays } from './game/days'
 
-export const MEDIA_CACHE = 'apartment-media-2026-11-16-v2'
+export const MEDIA_CACHE = 'apartment-media-2026-11-16-v3'
 
 const PROLOGUE_VERSION = '2026-11-14'
 export const PROLOGUE_VIDEO_URL =
@@ -17,6 +17,15 @@ const FIXED_ASSETS = [
   // Referenced directly by the day 16 extension, not by the day files.
   'media/audio/ambient/multime_z20.mp3',
   'media/audio/ambient/scandari_z16.mp3',
+  // Referenced directly by the day 18 extension, not by the day file.
+  'media/audio/voce/agent_intro.mp3',
+  'media/audio/voce/agent_gol.mp3',
+  'media/audio/voce/agent_film.mp3',
+  'media/audio/voce/agent_propunere.mp3',
+  'media/audio/voce/agent_raspuns_nume.mp3',
+  'media/audio/voce/agent_raspuns_minciuna.mp3',
+  'media/video/video_agent_gol.mp4',
+  'media/video/video_agent_film.mp4',
 ]
 const CONCURRENCY = 4
 const MAX_ATTEMPTS = 2
